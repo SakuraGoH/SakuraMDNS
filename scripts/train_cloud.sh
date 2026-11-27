@@ -42,7 +42,7 @@ echo "=============================================================="
 echo "Stage A: beta 0.2 -> 1.2, budget ${STAGE_A_HOURS}h"
 echo "=============================================================="
 $PY -u scripts/run_closed_loop.py $ARCH_ARGS $COMMON \
-    --rounds 60 --beta 0.2 --beta-start 0.2 --max-hours "${STAGE_A_HOURS}"
+    --rounds 60 --beta 1.2 --beta-start 0.2 --max-hours "${STAGE_A_HOURS}"
 
 CKPT="${OUT}/best.pt"
 if [ ! -f "$CKPT" ]; then

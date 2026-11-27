@@ -152,10 +152,16 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                 opt.load_state_dict(ck["opt"])
             except Exception as exc:      # arch changed since the checkpoint
                 print(f"warning: could not restore optimizer state ({exc}); continuing with fresh state")
-        gate.best_score = float(ck.get("score", 0.0))
+        stored = float(ck.get("score", 0.0))
+        # The stored score was measured against whatever reference/beta that run
+        # used.  If the target or the reference changed (e.g. after fixing a beta
+        # schedule), comparing a new score against it is meaningless, so re-score
+        # the incumbent against the *current* reference.
+        gate.best_score = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
         start_round = int(ck.get("round", -1)) + 1
-        print(f"resumed from {cfg.resume}: continuing at round {start_round}, "
-              f"incumbent score {gate.best_score:+.5f}")
+        print(f"resumed from {cfg.resume}: continuing at round {start_round}; "
+              f"incumbent re-scored {stored:+.5f} -> {gate.best_score:+.5f} "
+              f"(current reference, beta={cfg.beta})")
 
     if verbose:
         print(f"device={dev_mod.describe(dev)} arch={cfg.arch} params={model.num_params()/1e6:.4f}M "
@@ -178,6 +184,11 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             print("unbounded run without --anneal-rounds: annealing over the first 60 rounds")
     else:
         anneal_span = 1
+    if cfg.anneal and abs(cfg.beta - cfg.beta_start) < 1e-12:
+        print(f"WARNING: annealing is on but --beta == --beta-start == {cfg.beta}. "
+              f"The schedule is a no-op: the sampler will stay at that temperature "
+              f"for the whole run. Pass --beta <target> --beta-start <warm start> "
+              f"for a real ramp.")
 
     t_start = time.perf_counter()
     reject_streak = 0
@@ -259,6 +270,12 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                         "round": r, "score": score}, best_path)
             action = "promoted"
             reject_streak = 0
+        elif not best_path.exists():
+            # can happen when resuming into a fresh --out-dir and the first round
+            # is rejected: keep the current weights instead of crashing
+            print(f"  warning: no {best_path} to roll back to; keeping current weights")
+            action = "kept (no checkpoint to roll back to)"
+            reject_streak += 1
         else:
             ckpt = torch.load(best_path, map_location=dev, weights_only=False)
             model.load_state_dict(ckpt["model"])

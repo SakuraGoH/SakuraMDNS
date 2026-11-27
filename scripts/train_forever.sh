@@ -33,12 +33,13 @@ CTRL_C_SLEEP="${CTRL_C_SLEEP:-30}"
 ARCH_ARGS="--arch nbt-2 --n-blocks 6 --channels 64 --compression-ratio 2 --n-inner 2 --n-heads 4"
 
 COMMON="--L 16 --q 3 --rounds 0 --anneal-rounds ${ANNEAL_ROUNDS} \
-        --beta 0.2 --beta-start 0.2 \
+        --beta 1.2 --beta-start 0.2 \
         --steps-per-round 600 --resample-every 25 --scan-batch 1024 \
         --optimizer muon --lr 0.01 \
         --gate-mode holdout_nll --gate-ref-size 2048 --gate-min-improvement 1e-4 \
         --gate-ref-refresh 20 \
         --keep-shards 40 \
+        --lr-reduce-on-reject 0.7 \
         --out-dir ${OUT}"
 
 cd "$PROJ" || exit 1
