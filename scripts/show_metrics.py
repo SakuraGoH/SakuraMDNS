@@ -12,7 +12,12 @@ from pathlib import Path
 
 
 def main() -> int:
-    path = Path(sys.argv[1] if len(sys.argv) > 1 else "runs/loop_default/metrics.json")
+    args = [a for a in sys.argv[1:] if a not in ("-h", "--help")]
+    if not args:
+        print(__doc__)
+        print("usage: python scripts/show_metrics.py <metrics.json | metrics.jsonl>")
+        return 0
+    path = Path(args[0])
     if path.suffix == ".jsonl":
         # live view of an unbounded run: metrics.json is only written on exit
         rows = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
