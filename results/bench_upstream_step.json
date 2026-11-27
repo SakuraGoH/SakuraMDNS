@@ -1,0 +1,36 @@
+{
+  "upstream": {
+    "tag": "upstream RopeViT 128x4 (eager, as shipped)",
+    "params": 829060,
+    "scan_batch": 256,
+    "train_rows": 256,
+    "forward_ms": {
+      "256": 18.92,
+      "1024": 81.0
+    },
+    "scan_s": 4.76,
+    "train_step_s": 0.6582
+  },
+  "ours": {
+    "tag": "ours nbt-2x6 (scan+train compiled)",
+    "params": 95876,
+    "scan_batch": 1024,
+    "train_rows": 128,
+    "forward_ms": {
+      "256": 7.21,
+      "1024": 30.79
+    },
+    "scan_s": 2.47,
+    "train_step_s": 0.0892
+  },
+  "summary": {
+    "upstream_s_per_step": 1.1342,
+    "ours_s_per_step": 0.188,
+    "step_speedup": 6.03,
+    "upstream_samples_per_step": 25.6,
+    "ours_samples_per_step": 40.96,
+    "upstream_samples_per_s": 22.6,
+    "ours_samples_per_s": 217.9,
+    "samples_per_s_speedup": 9.65
+  }
+}

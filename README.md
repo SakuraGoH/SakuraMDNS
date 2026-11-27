@@ -23,6 +23,17 @@ incumbent, so a bad round can never poison the next scan.
 
 ## Results
 
+| what | number | where |
+|---|---|---|
+| C++ MCMC vs the original python samplers | **54-489x** faster (5 kernels, exact-enumeration validated 8/8) | [item 1](results/RESULTS_item1.md) |
+| GPU samplers (checkerboard / Wolff) on an Intel iGPU | 0.11-0.44x of the CPU kernels -- *slower*, so unused | [item 2](results/RESULTS_item2.md) |
+| NBT bottleneck + Transformer, compression ratio sweep | ratio **2** matches `res-m` with 7x fewer params / 7.4x less compute | [item 3/6](results/RESULTS_item3_6.md) |
+| Muon vs AdamW, equal wall-clock | **-0.0029 NLL** for Muon (costs 1.37x per step) | [item 7](results/RESULTS_item4_5_7.md) |
+| closed loop, 3 h on a 4080S (Potts L=16, beta=1.2) | hold-out NLL **1.071 -> 0.152**, ESS **0.026 -> 0.839**, 55/55 rounds promoted | [3 h run](results/RESULTS_train_3h.md) |
+| quality of the trained sampler vs exact Swendsen-Wang | ESS **0.946**, energy **+0.45%**, energy TV **0.086**, 2-pt correlation error **0.0087** | [eval](results/RESULTS_eval_L16.md) |
+| `--compile` + `--compile-train` | **2.14x** shorter rounds (strict A/B) | [throughput](results/RESULTS_throughput.md) |
+| training step vs the upstream project | **6.0x** per optimizer step, **9.7x** in samples/second | below |
+
 ### Sampling speed (CPU, L=16, B=128, β_critical / β=1.2)
 
 | kernel | python sweeps/s | C++ sweeps/s | speed-up |
@@ -267,27 +278,78 @@ Two subtleties that matter for long runs:
   reference the model eventually memorises it and the gate stops being honest.
   `--gate-ref-refresh 20` re-draws it and re-scores the incumbent on the new set.
 
-## Speed: what actually helps
+## Speed
 
-Measured on one RTX 4080 SUPER (L=16, `nbt-2` 6 blocks, β=1.2). Details and the
-full study are in [results/RESULTS_throughput.md](results/RESULTS_throughput.md).
+Every number below is measured on **one RTX 4080 SUPER** at L=16, beta=1.2.  Raw
+data is in `results/bench_*.json`; the full study is
+[results/RESULTS_throughput.md](results/RESULTS_throughput.md).
 
-| knob | effect | verdict |
+### Against the upstream training step
+
+`scripts/bench_upstream_step.py` times the original RopeViT (128 ch x 4 blocks,
+829 K parameters, eager exactly as shipped) against the current `nbt-2` (96 K,
+compiled), each at its own resample cadence:
+
+| | upstream MDNS | here | factor |
+|---|---|---|---|
+| parameters | 829 060 | 95 876 | 8.6x smaller |
+| forward @B=256 | 18.9 ms | 7.2 ms | 2.6x |
+| one scan | 4.76 s (256 samples -> 53.8/s) | 2.47 s (1024 -> **413.9/s**) | 7.7x |
+| training step | 658 ms (256x8 rows) | 89 ms (128x8 rows) | 7.4x |
+| **per optimizer step** | **1134 ms** | **188 ms** | **6.0x** |
+| **samples / second** | **22.6** | **217.9** | **9.7x** |
+
+(upstream re-scans every 10 steps with batch 256; here every 25 steps with
+batch 1024.)
+
+### Within the same architecture (strict A/B)
+
+| knob | effect |
+|---|---|
+| `--compile` (scan-only, compiled bf16 copy) | forward 29.5 -> 10.2 ms; scan 6.8 -> 3.0 s; round 88.6 -> 51.3 s |
+| `--compile-train` (also the training forward+loss) | step 135 -> 86 ms; round 51.3 -> **41.4 s** |
+| **both** | **2.14x shorter rounds** |
+
+Only the *scan* uses a compiled copy: a deep-copied bf16 model with the autocast
+context disabled (dynamo cannot trace through it), refreshed from the EMA weights
+before every scan.  The master weights stay fp32 for training and for the gate.
+Both graphs are warmed up at their real shapes before round 0 -- otherwise the
+first round silently pays the tracing cost (a warmup at the wrong batch once
+cost a full re-trace: 82.5 s instead of 41.4 s).
+
+### What does *not* help on a single GPU
+
+| knob | measured | why |
 |---|---|---|
-| `--compile` (scan-only, compiled bf16 copy) | forward 29.5 → 10.2 ms; scan 6.8 → 3.0 s | round 88.6 → 51.3 s |
-| `--compile-train` (also compile the training forward+loss) | step 135 → 86 ms | round 51.3 → **41.4 s** |
-| both together | vs eager | **2.14× shorter rounds**, ~94 → ~198 samples/s |
-| `--resample-every 10` (vs 25) | more scans per round | +24%, stacks with compile |
-| larger `--scan-batch` | 1024 → 66.7, 4096 → 60.7 samples/s | ❌ no gain on one GPU |
-| K concurrent scan processes | 1.14× (K=2), 1.20× (K=4) | ❌ GPU is already 98% busy |
+| larger `--scan-batch` | 1024 -> 66.7, 4096 -> 60.7 samples/s | per-sample cost is flat; the model already fills the SMs |
+| K concurrent scan processes | 1.14x (K=2), 1.20x (K=4) | the GPU is ~98% busy, workers only time-slice |
+| decoupling production from training | every=50 -> 71 vs every=25 -> 94 samples/s | both phases need the same GPU, so the times add up |
 
-Per-round sample budget is `scan_batch * (1 + (steps_per_round-1)//resample_every)`,
-optionally hard-capped with `--max-samples-per-round`. The loop prints it at
-startup (`samples/round = 1024 x (1 + 23) = 24576`).
+Parallel sampling pays off across **multiple GPUs**, not within one.
 
-The scan is O(D) sequential forward passes (D = L²), which is why it dominates a
-round. Compiling it is the only single-GPU lever worth pulling; parallelism pays
-off only across multiple GPUs.
+### Where the time goes, and the sample budget
+
+The scan is O(D) sequential forward passes (D = L^2), which is why it dominates a
+round.  Per-round sample budget:
+
+```
+samples/round = scan_batch * (1 + (steps_per_round - 1) // resample_every)
+              = 1024 * (1 + 23) = 24576          # the loop prints this at startup
+```
+
+Hard-cap it with `--max-samples-per-round N`; the loop takes the largest value
+that does not exceed `N`.
+
+| stage | hardware |
+|---|---|
+| scan (256 sequential forwards), reward, importance weights | **GPU** |
+| shard write (`round_XXXXXX.npz`) | CPU |
+| gate reference (2048 configs, every 20 rounds) | CPU, C++ Swendsen-Wang |
+| training forward + Muon step | **GPU** |
+
+~99.6% of the training samples come from the GPU; the CPU only produces the gate
+reference and does the I/O.  That is why CPU-side parallelism cannot speed this
+up: during a scan the CPU is only issuing kernel launches.
 
 ## Repository layout
 
@@ -313,6 +375,9 @@ scripts/
   validate_gpu_samplers.py
   bench_samplers.py    (removed - its baseline was the deleted python samplers)
   bench_gpu_samplers.py, bench_architectures.py, bench_optimizers.py
+  bench_upstream_step.py   upstream RopeViT step vs ours (the 6.0x table above)
+  bench_throughput.py      samples/s and ESS vs batch / resample cadence
+  bench_parallel_scan.py   does more parallelism help? (compile, batch, K workers)
   run_closed_loop.py   the training entrypoint
   train_cloud.sh       fixed-length 8 h run
   train_forever.sh     unbounded run with crash recovery
