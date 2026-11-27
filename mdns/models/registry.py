@@ -150,10 +150,17 @@ def build_from_config(cfg: Dict[str, Any], *, L: int, vocab_size: int, device=No
     # legacy ViT checkpoints
     from .ropevit import get_rope_vit_model
 
-    return get_rope_vit_model(L, embed_dim=cfg.get("channels", 64),
-                              depth=cfg.get("n_blocks", 6), num_heads=cfg.get("n_heads", 4),
-                              vocab_size=vocab_size, dtype=cfg.get("dtype", "bfloat16"),
-                              device=str(dev))
+    m = get_rope_vit_model(L, embed_dim=cfg.get("channels", 64),
+                           depth=cfg.get("n_blocks", 6), num_heads=cfg.get("n_heads", 4),
+                           vocab_size=vocab_size, dtype=cfg.get("dtype", "bfloat16"),
+                           device=str(dev))
+    # `build()` attaches these on the vit branch; `build_from_config` must too, or
+    # every caller that prints or records the name blows up on legacy checkpoints
+    if not hasattr(m, "name"):
+        m.name = cfg.get("name") or _sakura(block="vit", n_blocks=cfg.get("n_blocks", 6),
+                                            channels=cfg.get("channels", 64),
+                                            n_heads=cfg.get("n_heads", 4))
+    return m
 
 
 def summary(name: str) -> str:

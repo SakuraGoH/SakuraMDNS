@@ -315,6 +315,12 @@ still works: ESS 0.92 at L=24).
 
 Trained weights are kept in `results/weights/` locally (12.4 MB, git-ignored).
 
+The repo also ships the upstream project's own Potts L=16 beta=1.2 weights
+(`checkpoints/L_16_potts/potts_low.pth`, RopeViT 829K). They load strictly into
+`get_rope_vit_model(L, 128, depth=4, heads=4)`, so
+`scripts/convert_upstream_ckpt.py` turns them into a normal checkpoint that the
+same eval and comparison tools score -- the true "upstream vs ours" baseline.
+
 ## Speed
 
 Every number below is measured on **one RTX 4080 SUPER** at L=16, beta=1.2.  Raw

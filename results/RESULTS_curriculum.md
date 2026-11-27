@@ -150,3 +150,40 @@ python scripts/eval_checkpoint.py --ckpt results/weights/teacher_b6c64_round069.
 | `results/hp_student_r14/`、`hp_teacher_r69/` | n=16384 配对评估 |
 
 > 权重文件只存在本地 `results/weights/`（已加入 `.gitignore`，合计 12.4 MB），不在 git 仓库里。
+
+## 10. 原项目自带权重：真正的基线（已就绪，待跑）
+
+`checkpoints/L_16_potts/potts_low.pth` 是**原项目自己训练好的** Potts L=16 β=1.2 模型：
+
+| 项 | 值 |
+|---|---|
+| 架构 | RopeViT，embed_dim=128，depth=4，heads=4 |
+| 参数 | **829,060**（我们最佳模型 127,620 的 6.5 倍） |
+| 原始训练量 | 20,000 epochs × batch 256，每 10 步重采样 |
+| 自报指标 | 最终 loss **0.1522**、最终 `ess_eval` **0.9776** |
+| 权重 | model_state_dict + EMA（66 个张量，decay 0.9999） |
+
+**它可以直接加载并评分**：`model_state_dict` 与我们 `get_rope_vit_model(L, 128, depth=4, heads=4)`
+的 68 个 key 完全匹配（已用 `strict=True` 验证），EMA 也能恢复。`scripts/convert_upstream_ckpt.py`
+把它转成标准 checkpoint：
+
+```bash
+python scripts/convert_upstream_ckpt.py \
+    --src checkpoints/L_16_potts/potts_low.pth \
+    --out results/weights/upstream_ropevit_potts_low.pt
+
+python scripts/eval_checkpoint.py --ckpt results/weights/upstream_ropevit_potts_low.pt \
+    --beta 1.2 --n 4096 --out results/eval_upstream
+
+python scripts/compare_models.py \
+    --specs "upstream RopeViT=results/weights/upstream_ropevit_potts_low.pt" \
+            "b8c64=results/weights/b8c64_round024.pt" --n 4096
+```
+
+**这是唯一还缺的关键对比**：之前用 `res-s`（167 K）当"旧架构"的替身，现在有了原项目自己的
+829 K 模型，可以给出"原项目 vs 我们"在**同一把尺子**下的质量差距（而不只是耗时差距）。
+
+成本：在 4080S 上约 3 分钟；在本地 iGPU 上约 25–30 分钟（829 K ViT 的 256 次前向）。
+
+**注意**：原项目自报 `ess_eval = 0.9776` 是在它自己的参考集与评估脚本下得到的，与我们的数字
+不可直接比较；要比较必须用同一 `exact` 参考、同一 `n`、同一公式。
