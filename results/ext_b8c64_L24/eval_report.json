@@ -1,0 +1,70 @@
+{
+  "checkpoint": "results/archive_b8c64_round024.pt",
+  "sakura_name": "sakura-b8c64h4nbt2tf-s1024000",
+  "round": 24,
+  "arch": {
+    "arch": "latticenet",
+    "name": "sakura-b8c64h4nbt2tf",
+    "L": 16,
+    "vocab_size": 4,
+    "channels": 64,
+    "n_blocks": 8,
+    "block": "nbt",
+    "compression_ratio": 2,
+    "autocast": true,
+    "use_attention": true,
+    "dtype": "bfloat16"
+  },
+  "beta": 1.2,
+  "n_samples": 2048,
+  "scan_ess": 0.9192,
+  "energy_per_site": {
+    "mdns": -1.89604,
+    "sw": -1.89723,
+    "delta": 0.0012,
+    "delta_pct": 0.063
+  },
+  "energy_std": {
+    "mdns": 0.03074,
+    "sw": 0.0315
+  },
+  "energy_tv": 0.0713,
+  "mag_fraction": {
+    "mdns_mean": 0.9685,
+    "sw_mean": 0.9687,
+    "mdns_std": 0.0112,
+    "sw_std": 0.0119,
+    "tv": 0.0347
+  },
+  "corr_max_abs_err": 0.001,
+  "corr_mdns_rows": [
+    1.0,
+    0.9221,
+    0.9105,
+    0.9083,
+    0.9079,
+    0.9078,
+    0.9078,
+    0.9076,
+    0.9077,
+    0.9078,
+    0.9076,
+    0.9076,
+    0.9075
+  ],
+  "corr_sw_rows": [
+    1.0,
+    0.9229,
+    0.9112,
+    0.909,
+    0.9085,
+    0.9083,
+    0.9082,
+    0.9082,
+    0.9084,
+    0.9082,
+    0.9082,
+    0.9083,
+    0.9083
+  ]
+}

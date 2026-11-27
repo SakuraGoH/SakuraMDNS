@@ -1,0 +1,70 @@
+{
+  "checkpoint": "runs/potts_L16_b8c128_curriculum/best.pt",
+  "sakura_name": "sakura-b8c128h4nbt2tf-s245760",
+  "round": 5,
+  "arch": {
+    "arch": "latticenet",
+    "name": "sakura-b8c128h4nbt2tf",
+    "L": 16,
+    "vocab_size": 4,
+    "channels": 128,
+    "n_blocks": 8,
+    "block": "nbt",
+    "compression_ratio": 2,
+    "autocast": true,
+    "use_attention": true,
+    "dtype": "bfloat16"
+  },
+  "beta": 1.2,
+  "n_samples": 2048,
+  "scan_ess": 0.9091,
+  "energy_per_site": {
+    "mdns": -1.89601,
+    "sw": -1.89723,
+    "delta": 0.00122,
+    "delta_pct": 0.064
+  },
+  "energy_std": {
+    "mdns": 0.03056,
+    "sw": 0.0315
+  },
+  "energy_tv": 0.0767,
+  "mag_fraction": {
+    "mdns_mean": 0.9687,
+    "sw_mean": 0.9687,
+    "mdns_std": 0.0108,
+    "sw_std": 0.0119,
+    "tv": 0.0518
+  },
+  "corr_max_abs_err": 0.0009,
+  "corr_mdns_rows": [
+    1.0,
+    0.922,
+    0.9106,
+    0.9086,
+    0.9082,
+    0.9082,
+    0.9082,
+    0.9081,
+    0.9082,
+    0.9082,
+    0.9082,
+    0.9081,
+    0.9082
+  ],
+  "corr_sw_rows": [
+    1.0,
+    0.9229,
+    0.9112,
+    0.909,
+    0.9085,
+    0.9083,
+    0.9082,
+    0.9082,
+    0.9084,
+    0.9082,
+    0.9082,
+    0.9083,
+    0.9083
+  ]
+}

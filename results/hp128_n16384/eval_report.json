@@ -1,0 +1,62 @@
+{
+  "checkpoint": "runs/potts_L16_b8c128_curriculum/best.pt",
+  "sakura_name": "sakura-b8c128h4nbt2tf-s245760",
+  "round": 5,
+  "arch": {
+    "arch": "latticenet",
+    "name": "sakura-b8c128h4nbt2tf",
+    "L": 16,
+    "vocab_size": 4,
+    "channels": 128,
+    "n_blocks": 8,
+    "block": "nbt",
+    "compression_ratio": 2,
+    "autocast": true,
+    "use_attention": true,
+    "dtype": "bfloat16"
+  },
+  "beta": 1.2,
+  "n_samples": 16384,
+  "scan_ess": 0.969,
+  "energy_per_site": {
+    "mdns": -1.89801,
+    "sw": -1.89834,
+    "delta": 0.00033,
+    "delta_pct": 0.017
+  },
+  "energy_std": {
+    "mdns": 0.0459,
+    "sw": 0.04589
+  },
+  "energy_tv": 0.017,
+  "mag_fraction": {
+    "mdns_mean": 0.9693,
+    "sw_mean": 0.9691,
+    "mdns_std": 0.0164,
+    "sw_std": 0.017,
+    "tv": 0.0041
+  },
+  "corr_max_abs_err": 0.0005,
+  "corr_mdns_rows": [
+    1.0,
+    0.9235,
+    0.9124,
+    0.9106,
+    0.9102,
+    0.9101,
+    0.9101,
+    0.91,
+    0.9101
+  ],
+  "corr_sw_rows": [
+    1.0,
+    0.9237,
+    0.9123,
+    0.9101,
+    0.9097,
+    0.9096,
+    0.9096,
+    0.9096,
+    0.9096
+  ]
+}

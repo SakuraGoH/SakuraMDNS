@@ -1,0 +1,78 @@
+{
+  "checkpoint": "results/archive_b8c64_round024.pt",
+  "sakura_name": "sakura-b8c64h4nbt2tf-s1024000",
+  "round": 24,
+  "arch": {
+    "arch": "latticenet",
+    "name": "sakura-b8c64h4nbt2tf",
+    "L": 16,
+    "vocab_size": 4,
+    "channels": 64,
+    "n_blocks": 8,
+    "block": "nbt",
+    "compression_ratio": 2,
+    "autocast": true,
+    "use_attention": true,
+    "dtype": "bfloat16"
+  },
+  "beta": 1.2,
+  "n_samples": 2048,
+  "scan_ess": 0.6725,
+  "energy_per_site": {
+    "mdns": -1.89385,
+    "sw": -1.8981,
+    "delta": 0.00425,
+    "delta_pct": 0.224
+  },
+  "energy_std": {
+    "mdns": 0.02352,
+    "sw": 0.02301
+  },
+  "energy_tv": 0.0835,
+  "mag_fraction": {
+    "mdns_mean": 0.9675,
+    "sw_mean": 0.9689,
+    "mdns_std": 0.0089,
+    "sw_std": 0.0086,
+    "tv": 0.0396
+  },
+  "corr_max_abs_err": 0.0042,
+  "corr_mdns_rows": [
+    1.0,
+    0.9205,
+    0.9083,
+    0.9057,
+    0.9052,
+    0.905,
+    0.9051,
+    0.905,
+    0.905,
+    0.905,
+    0.9051,
+    0.905,
+    0.905,
+    0.905,
+    0.905,
+    0.905,
+    0.9049
+  ],
+  "corr_sw_rows": [
+    1.0,
+    0.9236,
+    0.912,
+    0.9097,
+    0.9092,
+    0.909,
+    0.909,
+    0.909,
+    0.9089,
+    0.909,
+    0.909,
+    0.909,
+    0.909,
+    0.909,
+    0.9089,
+    0.909,
+    0.9089
+  ]
+}

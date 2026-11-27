@@ -1,0 +1,65 @@
+{
+  "beta": 1.2,
+  "n": 4096,
+  "L": 16,
+  "q": 3,
+  "energy_noise_1sigma": 0.000712,
+  "models": [
+    {
+      "label": "res-s 167K",
+      "path": "runs/potts_L16_b1.2/best.pt",
+      "params": 167716,
+      "round": 54,
+      "name": null,
+      "ess": 0.9512,
+      "energy_mean": -1.88877,
+      "energy_sw": -1.898622,
+      "energy_delta": 0.009851,
+      "energy_tv": 0.0901,
+      "mag_tv": 0.0874,
+      "corr_max_abs_err": 0.00927
+    },
+    {
+      "label": "b6c64 96K",
+      "path": "runs/potts_L16_nbt2x6_forever/best.pt",
+      "params": 95876,
+      "round": 69,
+      "name": "sakura-b6c64h4nbt2tf-s1851392",
+      "ess": 0.9756,
+      "energy_mean": -1.896981,
+      "energy_sw": -1.898622,
+      "energy_delta": 0.00164,
+      "energy_tv": 0.0315,
+      "mag_tv": 0.0278,
+      "corr_max_abs_err": 0.00145
+    },
+    {
+      "label": "b8c64 128K",
+      "path": "results/archive_b8c64_round024.pt",
+      "params": 127620,
+      "round": 24,
+      "name": "sakura-b8c64h4nbt2tf-s1024000",
+      "ess": 0.9797,
+      "energy_mean": -1.897662,
+      "energy_sw": -1.898622,
+      "energy_delta": 0.000959,
+      "energy_tv": 0.0366,
+      "mag_tv": 0.0427,
+      "corr_max_abs_err": 0.00103
+    },
+    {
+      "label": "b8c128 485K",
+      "path": "results/archive_b8c128_round005.pt",
+      "params": 484612,
+      "round": 5,
+      "name": "sakura-b8c128h4nbt2tf-s245760",
+      "ess": 0.9652,
+      "energy_mean": -1.897445,
+      "energy_sw": -1.898622,
+      "energy_delta": 0.001177,
+      "energy_tv": 0.0488,
+      "mag_tv": 0.0344,
+      "corr_max_abs_err": 0.00099
+    }
+  ]
+}
