@@ -278,6 +278,43 @@ Two subtleties that matter for long runs:
   reference the model eventually memorises it and the gate stops being honest.
   `--gate-ref-refresh 20` re-draws it and re-scores the incumbent on the new set.
 
+## Two-stage curriculum: inherit data, not weights
+
+`scripts/train_curriculum.sh` replaces "resume the previous run" with a
+data-level handover, which is how a student can end up *better* than its teacher.
+
+1. **Stage 1** (`--warmup-shards`, `--warmup-ckpt`) trains a fresh model on
+   shards a previous model produced, until its gate score catches up.  The shards
+   carry self-normalised importance weights for pi, so replaying them is a valid
+   off-policy estimate: the student inherits the teacher's *data*, not its
+   weights -- and therefore not its bias.  Distillation has a hard ceiling (the
+   teacher's own score) and the measurement confirms it: the student plateaus
+   5e-5 short, and a 3.8x wider student only closes 2e-5 of that.
+2. **Stage 2** (`--window-rounds W`) switches to self-generated data with a
+   bounded sliding replay window, and this is where it overtakes the teacher.
+
+Potts q=3, L=16, beta=1.2, n=16384 against one shared exact reference
+(1 sigma = 3.6e-4 on energy/site):
+
+| | teacher `b6c64` r69 | student `b8c64` r24 |
+|---|---|---|
+| parameters | 95,876 | 127,620 |
+| ESS | 0.9765 | **0.9816** |
+| energy bias | +1.26e-3 (**2.5 sigma**, a real bias) | **+4.4e-4 (1.2 sigma)**, inside the noise |
+| energy TV | 0.0231 | **0.0190** |
+| magnetisation TV | 0.0130 | **0.0046** |
+| 2-point correlation error | 1.1e-3 | **4.0e-4** |
+
+The student beats its teacher on all four metrics after 2.2 h of training
+(teacher: ~5 h).  Full write-ups:
+[results/RESULTS_curriculum.md](results/RESULTS_curriculum.md) and
+[results/RESULTS_scaling.md](results/RESULTS_scaling.md) -- the latter shows that
+extra capacity buys convergence *speed* but neither final quality nor zero-shot
+size extrapolation (the checkpoint has no L-dependent parameters, so L=16 -> L=24
+still works: ESS 0.92 at L=24).
+
+Trained weights are kept in `results/weights/` locally (12.4 MB, git-ignored).
+
 ## Speed
 
 Every number below is measured on **one RTX 4080 SUPER** at L=16, beta=1.2.  Raw

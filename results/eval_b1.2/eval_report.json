@@ -1,0 +1,59 @@
+{
+  "checkpoint": "runs/potts_L16_b1.2/best.pt",
+  "round": 54,
+  "arch": {
+    "arch": "latticenet",
+    "L": 16,
+    "vocab_size": 4,
+    "channels": 48,
+    "n_blocks": 4,
+    "block": "res",
+    "compression_ratio": 1,
+    "use_attention": false,
+    "dtype": "bfloat16"
+  },
+  "beta": 1.2,
+  "n_samples": 4096,
+  "scan_ess": 0.9462,
+  "energy_per_site": {
+    "mdns": -1.89004,
+    "sw": -1.89862,
+    "delta": 0.00858,
+    "delta_pct": 0.452
+  },
+  "energy_std": {
+    "mdns": 0.04829,
+    "sw": 0.04556
+  },
+  "energy_tv": 0.0862,
+  "mag_fraction": {
+    "mdns_mean": 0.9662,
+    "sw_mean": 0.9692,
+    "mdns_std": 0.0183,
+    "sw_std": 0.0169,
+    "tv": 0.0601
+  },
+  "corr_max_abs_err": 0.0087,
+  "corr_mdns_rows": [
+    1.0,
+    0.9175,
+    0.9047,
+    0.9022,
+    0.9016,
+    0.9014,
+    0.9012,
+    0.9012,
+    0.9011
+  ],
+  "corr_sw_rows": [
+    1.0,
+    0.9239,
+    0.9124,
+    0.9102,
+    0.9097,
+    0.9097,
+    0.9097,
+    0.9097,
+    0.9097
+  ]
+}

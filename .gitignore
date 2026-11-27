@@ -31,3 +31,6 @@ checkpoints/
 torchinductor_*/
 .DS_Store
 Thumbs.db
+
+# locally pulled checkpoints (see results/RESULTS_curriculum.md)
+results/weights/
