@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import json
 import math
+import re
+from collections import deque
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -65,6 +67,20 @@ class LoopConfig:
     # context out of LatticeNet.logits (dynamo cannot trace it), which is done
     # here by flipping model.autocast_enabled and wrapping the loss call instead.
     compile_train: bool = False
+    # ---- two-stage curriculum ----
+    # Stage 1: warm up a *fresh* model on shards produced by a previous
+    # model, until its gate score catches up with that model.  The stored
+    # log_rnd are self-normalised importance weights for pi, so replaying
+    # them is a valid off-policy estimate -- the new model inherits the
+    # *data*, not the old weights, which is how it can escape the old
+    # model's optimum (e.g. its residual temperature bias).
+    warmup_shards: str | None = None       # directory of round_*.npz
+    warmup_min_round: int = 0              # only shards with round >= this
+    warmup_steps: int = 0                  # maximum warmup steps
+    warmup_ckpt: str | None = None         # old checkpoint to catch up with
+    warmup_eval_every: int = 2000
+    # Stage 2: self-generated data with a sliding replay window (rounds)
+    window_rounds: int = 0                 # 0 = current round only
     gate_ref_refresh: int = 0     # re-draw the gate reference every N rounds (0 = never)
     L: int = 8
     q: int = 3
@@ -89,6 +105,27 @@ class LoopConfig:
     replay: bool = False
     out_dir: str = "runs/loop"
     seed: int = 0
+
+
+def load_shards(directory: str, min_round: int = 0) -> tuple:
+    """Load round_*.npz shards into (x int8 [N,D], log_rnd float32 [N])."""
+    import numpy as _np
+
+    xs, ws, used = [], [], []
+    for p in sorted(Path(directory).glob("round_*.npz")):
+        m = re.search(r"round_(\d+)", p.name)
+        if not m or int(m.group(1)) < min_round:
+            continue
+        d = _np.load(p)
+        xs.append(d["x"].astype(_np.int8))
+        ws.append(d["log_rnd"].astype(_np.float32))
+        used.append(p.name)
+    if not xs:
+        raise FileNotFoundError(f"no shards with round >= {min_round} in {directory}")
+    x = torch.from_numpy(_np.concatenate(xs))
+    w = torch.from_numpy(_np.concatenate(ws))
+    print(f"warmup data: {len(used)} shards, {x.shape[0]} samples ({used[0]} .. {used[-1]})")
+    return x, w
 
 
 def _reward_fn(cfg: LoopConfig, beta: float | None = None):
@@ -173,6 +210,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
 
     start_round = 0
     total_samples = 0          # samples scanned since the very first round
+    _warmed = False            # True once this run has finished its warmup stage
     if cfg.resume:
         ck = torch.load(cfg.resume, map_location=dev, weights_only=False)
         model.load_state_dict(ck["model"])
@@ -191,6 +229,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         gate.best_score = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
         total_samples = int(ck.get("total_samples", 0))
         start_round = int(ck.get("round", -1)) + 1
+        _warmed = bool(ck.get("warmup", False))
         print(f"resumed from {cfg.resume}: continuing at round {start_round}; "
               f"incumbent re-scored {stored:+.5f} -> {gate.best_score:+.5f} "
               f"(current reference, beta={cfg.beta})")
@@ -200,6 +239,12 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
               f"L={cfg.L} q={cfg.q} beta={cfg.beta} optimizer={cfg.optimizer} "
               f"gate={cfg.gate_mode} rounds={cfg.rounds}")
         print(f"reference set: {tuple(reference.shape)} (C++ Swendsen-Wang, gate only)")
+        if cfg.warmup_steps > 0:
+            print(f"stage 1 (warmup): {cfg.warmup_shards} shards with round >= "
+                  f"{cfg.warmup_min_round}, up to {cfg.warmup_steps} steps, "
+                  f"target = {cfg.warmup_ckpt or 'no catch-up check'}")
+        if cfg.window_rounds > 0:
+            print(f"stage 2 (self-generated): sliding window of {cfg.window_rounds} rounds")
         print(f"model name: {model.name}-s{total_samples}   "
               f"(arch part is stored inside the checkpoint; the -s<N> counter is the "
               f"total number of samples scanned so far)")
@@ -267,6 +312,66 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
 
     t_start = time.perf_counter()
     reject_streak = 0
+
+    # Sliding replay window for stage 2 (int8 keeps a round at ~10 MB).
+    window: deque = deque(maxlen=max(1, cfg.window_rounds or 1))
+
+    # ---------------------------------------------------------------- stage 1
+    # Warm up on a previous model's shards until this model catches up with it.
+    # The shards carry self-normalised importance weights for pi, so replaying
+    # them is a valid off-policy estimate: the new model inherits the previous
+    # model's *data*, not its weights, which is how it can escape the previous
+    # model's optimum (e.g. its residual temperature bias).
+    if cfg.warmup_shards and cfg.warmup_steps > 0 and _warmed:
+        print(f"warmup skipped: {cfg.resume} already completed its warmup stage")
+    elif cfg.warmup_shards and cfg.warmup_steps > 0:
+        xw, ww = load_shards(cfg.warmup_shards, cfg.warmup_min_round)
+        xw, ww = xw.to(dev), ww.to(dev)
+        target = None
+        if cfg.warmup_ckpt:
+            _old = torch.load(cfg.warmup_ckpt, map_location=dev, weights_only=False)
+            _ac = _old["arch"]
+            old_model = build_from_config(_ac, L=_ac["L"], vocab_size=_ac["vocab_size"], device=dev)
+            old_model.load_state_dict(_old["model"])
+            old_ema = EMA(list(old_model.parameters()), decay=cfg.ema_decay)
+            if "ema" in _old:
+                old_ema.load_state_dict(_old["ema"])
+            target = _score_with_ema(old_model, old_ema, gate, reference, cfg, dev, beta=cfg.beta)
+            print(f"warmup target : previous model {_old.get('sakura_name')} "
+                  f"(round {_old.get('round')}) scores {target:+.5f} on the current reference")
+            del old_model, old_ema
+        step = -1
+        model.train()
+        for step in range(cfg.warmup_steps):
+            idx = torch.randint(xw.shape[0], (cfg.train_batch,), device=dev)
+            loss = train_loss(model, ww[idx], xw[idx].long(), cfg.num_replicates)
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            opt.step()
+            ema.update(params)
+            if target is not None and (step + 1) % cfg.warmup_eval_every == 0:
+                s_now = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
+                print(f"  warmup {step + 1:>6}/{cfg.warmup_steps}  loss={loss.item():.4f}  "
+                      f"score={s_now:+.5f}  target={target:+.5f}  "
+                      f"{'caught up' if s_now >= target else 'behind'}")
+                if s_now >= target:
+                    break
+        s_final = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
+        caught = target is None or s_final >= target
+        print(f"warmup finished after {step + 1} steps: score {s_final:+.5f} "
+              f"({'caught up with the previous model' if caught else 'STILL BEHIND'})")
+        # Persist it as the incumbent so a rollback returns here, not to the old model.
+        gate.best_score = s_final
+        if best_path.exists():                 # keep the model we are replacing
+            backup = out / f"best_prev_round{start_round - 1:04d}.pt" if start_round else out / "best_prev.pt"
+            backup.write_bytes(best_path.read_bytes())
+            print(f"backed up the previous incumbent to {backup.name}")
+        torch.save({"round": start_round - 1, "score": s_final, "arch": arch_cfg,
+                    "model": model.state_dict(), "ema": ema.state_dict(),
+                    "opt": opt.state_dict(), "warmup": True,
+                    "sakura_name": f"{model.name}-s{total_samples}",
+                    "total_samples": total_samples}, best_path)
+
     for r in range(start_round, limit):
         if cfg.max_hours and (time.perf_counter() - t_start) / 3600.0 >= cfg.max_hours:
             print(f"time budget {cfg.max_hours}h reached after {r} rounds; stopping cleanly")
@@ -300,7 +405,8 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         # 1 ---------- scan with the current (EMA) weights -------------------
         x, log_rnd = scan_and_count(reward)
         scan_ess = ess(log_rnd)
-        shards.append((x, log_rnd))
+        if cfg.replay:            # only kept for the legacy full-replay mode
+            shards.append((x, log_rnd))
 
         # 2 ---------- persist the shard ------------------------------------
         np.savez_compressed(out / f"round_{r:06d}.npz",
@@ -311,10 +417,16 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                 old.unlink(missing_ok=True)
 
         # 3 ---------- train on this round's data ---------------------------
-        pool_x, pool_w = x, log_rnd
-        if cfg.replay and len(shards) > 1:
+        if cfg.window_rounds > 0:
+            window.append((x.to(torch.int8), log_rnd))
+            j = len(window) - 1 if len(window) == 1 else int(torch.randint(len(window), (1,)))
+            pool_x = window[j][0].long()
+            pool_w = window[j][1]
+        elif cfg.replay and len(shards) > 1:
             pool_x = torch.cat([s[0] for s in shards], dim=0)
             pool_w = torch.cat([s[1] for s in shards], dim=0)
+        else:
+            pool_x, pool_w = x, log_rnd
         n_pool = pool_x.shape[0]
         losses = []
         # How many rescans this round will do.  samples/round = scan_batch * (1 + n_rescans),

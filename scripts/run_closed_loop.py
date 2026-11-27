@@ -45,6 +45,17 @@ def main() -> int:
                    help="keep only the newest N round_*.npz (0 = keep all)")
     p.add_argument("--stop-after-rejects", type=int, default=0,
                    help="stop after N consecutive gate rejections (0 = never)")
+    p.add_argument("--warmup-shards", default=None,
+                   help="directory of round_*.npz from a previous run: warm up on it first")
+    p.add_argument("--warmup-min-round", type=int, default=0,
+                   help="only shards with round >= this (pick the ones at the target beta)")
+    p.add_argument("--warmup-steps", type=int, default=0, help="max warmup steps (0 = skip)")
+    p.add_argument("--warmup-ckpt", default=None,
+                   help="checkpoint of the previous model to catch up with")
+    p.add_argument("--warmup-eval-every", type=int, default=2000,
+                   help="steps between catch-up checks during warmup")
+    p.add_argument("--window-rounds", type=int, default=0,
+                   help="sliding replay window for self-generated data (0 = current round only)")
     p.add_argument("--reset-optimizer", action="store_true",
                    help="on --resume, drop the stored optimizer state so --lr takes effect")
     p.add_argument("--gate-min-improvement-floor", type=float, default=1e-6,
@@ -122,7 +133,13 @@ def main() -> int:
                      max_samples_per_round=args.max_samples_per_round,
                      compile_train=args.compile_train,
                      reset_optimizer=args.reset_optimizer,
-                     gate_min_improvement_floor=args.gate_min_improvement_floor)
+                     gate_min_improvement_floor=args.gate_min_improvement_floor,
+                     warmup_shards=args.warmup_shards,
+                     warmup_min_round=args.warmup_min_round,
+                     warmup_steps=args.warmup_steps,
+                     warmup_ckpt=args.warmup_ckpt,
+                     warmup_eval_every=args.warmup_eval_every,
+                     window_rounds=args.window_rounds)
 
     dev = dev_mod.resolve(args.device)
     print(f"device: {dev_mod.describe(dev)}")
