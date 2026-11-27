@@ -1,0 +1,20 @@
+# Line endings: the code is edited on Windows and run on Linux (AutoDL / CUDA box).
+# Force LF everywhere so shell scripts never arrive on the server with \r\n, which
+# makes bash fail with "set: -: invalid option" / "$'\r': command not found".
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.txt text eol=lf
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.pt binary
+*.pth binary
+*.so binary
+*.dll binary
+*.npz binary
