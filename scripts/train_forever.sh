@@ -45,6 +45,13 @@ COMMON="--L 16 --q 3 --rounds 0 --anneal-rounds ${ANNEAL_ROUNDS} \
 cd "$PROJ" || exit 1
 mkdir -p logs runs
 
+# Mirror everything to a timestamped log while still printing to the terminal, so
+# `bash scripts/train_forever.sh` can simply be run in the foreground: you watch
+# the rounds scroll by and the record survives a closed browser tab.
+LOG="${LOG:-logs/run_$(date +%Y%m%d_%H%M%S).log}"
+exec > >(tee -a "$LOG") 2>&1
+echo "logging to $LOG"
+
 if [ ! -f mdns/samplers/build/libmdns_samplers.so ]; then
   echo "[setup] building native samplers"
   g++ -O3 -march=native -fopenmp -fPIC -shared -std=c++17 \
