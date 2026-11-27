@@ -267,6 +267,22 @@ Two subtleties that matter for long runs:
   reference the model eventually memorises it and the gate stops being honest.
   `--gate-ref-refresh 20` re-draws it and re-scores the incumbent on the new set.
 
+## Speed: what actually helps
+
+Measured on one RTX 4080 SUPER (L=16, `nbt-2` 6 blocks, β=1.2). Details and the
+full study are in [results/RESULTS_throughput.md](results/RESULTS_throughput.md).
+
+| knob | effect | verdict |
+|---|---|---|
+| `--compile` (compiled bf16 scan copy) | forward 29.5 → 10.2 ms; round 262 → ~191 s | **+37% samples/s** ✅ |
+| `--resample-every 10` (vs 25) | more scans per round | +24%, stacks with compile ✅ |
+| larger `--scan-batch` | 1024 → 66.7, 4096 → 60.7 samples/s | ❌ no gain on one GPU |
+| K concurrent scan processes | 1.14× (K=2), 1.20× (K=4) | ❌ GPU is already 98% busy |
+
+The scan is O(D) sequential forward passes (D = L²), which is why it dominates a
+round. Compiling it is the only single-GPU lever worth pulling; parallelism pays
+off only across multiple GPUs.
+
 ## Repository layout
 
 ```
