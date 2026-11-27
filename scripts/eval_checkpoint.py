@@ -40,10 +40,14 @@ PALETTE = ["#540D6E", "#EE4266", "#FFD23F"]
 
 
 # ------------------------------------------------------------------ helpers
-def load_model(ckpt_path: str, device, use_ema: bool = True):
+def load_model(ckpt_path: str, device, use_ema: bool = True, L_override: int | None = None):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     cfg = ckpt["arch"]
-    L, N = int(cfg["L"]), int(cfg["vocab_size"])
+    # L_override builds the SAME weights at a different lattice size -- the arch has
+    # no positional encoding (circular convs + position-free attention), so the
+    # parameters carry no L dependence and this is a zero-shot size transfer.
+    L = int(L_override or cfg["L"])
+    N = int(cfg["vocab_size"])
     model = build_from_config(cfg, L=L, vocab_size=N, device=device)
     model.load_state_dict(ckpt["model"])
     if use_ema and "ema" in ckpt:
@@ -141,12 +145,14 @@ def main() -> int:
     ap.add_argument("--out", default="results/eval")
     ap.add_argument("--device", default="auto")
     ap.add_argument("--no-ema", action="store_true")
+    ap.add_argument("--L", type=int, default=None,
+                   help="evaluate the same weights at another lattice size (zero-shot extrapolation)")
     args = ap.parse_args()
 
     dev = dev_mod.resolve(args.device)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    model, ckpt, L, N = load_model(args.ckpt, dev, use_ema=not args.no_ema)
+    model, ckpt, L, N = load_model(args.ckpt, dev, use_ema=not args.no_ema, L_override=args.L)
     q = N - 1
     print(f"model={ckpt.get('sakura_name', model.name)}")
     print(f"device={dev_mod.describe(dev)}  ckpt round={ckpt.get('round')}  "
