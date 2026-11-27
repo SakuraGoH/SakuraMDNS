@@ -23,13 +23,15 @@ PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 PY="${PY:-/root/miniconda3/bin/python}"
 TEACHER="${TEACHER:-runs/potts_L16_nbt2x6_forever/best.pt}"
 WARMUP_DIR="${WARMUP_DIR:-data/warmup_old}"
-OUT="${OUT:-runs/potts_L16_nbt2x8_curriculum}"
+OUT="${OUT:-runs/potts_L16_b${BLOCKS}c${CH}_curriculum}"
+BLOCKS="${BLOCKS:-8}"
+CH="${CH:-64}"
 WINDOW="${WINDOW:-4}"
 WARMUP_STEPS="${WARMUP_STEPS:-12000}"
 LR="${LR:-0.002}"
 SLEEP="${SLEEP:-30}"
 
-COMMON="--arch nbt-2 --n-blocks 8 --channels 64 --compression-ratio 2 --n-inner 2 --n-heads 4 \
+COMMON="--arch nbt-2 --n-blocks ${BLOCKS} --channels ${CH} --compression-ratio 2 --n-inner 2 --n-heads 4 \
         --L 16 --q 3 --rounds 0 \
         --beta 1.2 --beta-start 1.2 --no-anneal \
         --steps-per-round 800 --resample-every 20 --scan-batch 1024 \
@@ -49,7 +51,7 @@ cd "$PROJ" || exit 1
 mkdir -p logs runs data
 LOG="${LOG:-logs/curriculum_$(date +%Y%m%d_%H%M%S).log}"
 exec > >(tee -a "$LOG") 2>&1
-echo "curriculum: teacher=${TEACHER} warmup=${WARMUP_DIR} window=${WINDOW} lr=${LR}"
+echo "curriculum: arch=b${BLOCKS}c${CH} teacher=${TEACHER} warmup=${WARMUP_DIR} window=${WINDOW} lr=${LR}"
 echo "logging to ${LOG}"
 
 if [ ! -f mdns/samplers/build/libmdns_samplers.so ]; then
