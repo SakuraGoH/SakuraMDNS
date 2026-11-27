@@ -53,6 +53,9 @@ class LoopConfig:
     stop_after_rejects: int = 0   # stop after N consecutive gate rejections (0 = never)
     lr_reduce_on_reject: float = 0.0   # multiply LR on rejection (0 = off)
     lr_min: float = 1e-5
+    gate_min_improvement_floor: float = 1e-6  # min_improvement decays with LR, floored here
+    reset_optimizer: bool = False   # on --resume, start with a fresh optimizer state
+                                    # (otherwise the decayed LR is restored and --lr is ignored)
     log_jsonl: bool = True        # append one JSON line per round
     # torch.compile the *scan-only* inference copy (bf16 weights, autocast off).
     # Measured on a 4080S at L=16: forward 29.5 ms -> 10.2 ms (2.9x), which cuts
@@ -175,7 +178,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         model.load_state_dict(ck["model"])
         if "ema" in ck:
             ema.load_state_dict(ck["ema"])
-        if "opt" in ck:
+        if "opt" in ck and not cfg.reset_optimizer:
             try:
                 opt.load_state_dict(ck["opt"])
             except Exception as exc:      # arch changed since the checkpoint
@@ -376,6 +379,12 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             if cfg.lr_reduce_on_reject:
                 for g in opt.param_groups:
                     g["lr"] = max(cfg.lr_min, g["lr"] * cfg.lr_reduce_on_reject)
+                # Scale the acceptance threshold with the step size.  If only
+                # the LR decays, the achievable improvement shrinks below a
+                # fixed min_improvement and the run can never promote again
+                # (observed: 8 rejections at 2e-5 vs a 1e-4 threshold).
+                gate.min_improvement = max(cfg.gate_min_improvement_floor,
+                                           gate.min_improvement * cfg.lr_reduce_on_reject)
 
         dev_mod.synchronize(dev)
         dt = time.perf_counter() - t0
@@ -387,6 +396,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                "score_after": round(score, 6),
                "accepted": decision.accepted, "action": action,
                "lr": round(float(opt.param_groups[0]["lr"]), 8),
+               "min_improvement": gate.min_improvement,
                "reject_streak": reject_streak, "seconds": round(dt, 2)}
         history.append(row)
         if cfg.log_jsonl:

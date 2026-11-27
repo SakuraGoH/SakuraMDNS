@@ -45,6 +45,10 @@ def main() -> int:
                    help="keep only the newest N round_*.npz (0 = keep all)")
     p.add_argument("--stop-after-rejects", type=int, default=0,
                    help="stop after N consecutive gate rejections (0 = never)")
+    p.add_argument("--reset-optimizer", action="store_true",
+                   help="on --resume, drop the stored optimizer state so --lr takes effect")
+    p.add_argument("--gate-min-improvement-floor", type=float, default=1e-6,
+                   help="floor for min_improvement as it decays with LR on rejections")
     p.add_argument("--lr-reduce-on-reject", type=float, default=0.0,
                    help="multiply LR by this factor when a round is rejected (0 = off)")
     p.add_argument("--max-hours", type=float, default=0.0,
@@ -116,7 +120,9 @@ def main() -> int:
                      gate_ref_refresh=args.gate_ref_refresh,
                      compile_scan=args.compile,
                      max_samples_per_round=args.max_samples_per_round,
-                     compile_train=args.compile_train)
+                     compile_train=args.compile_train,
+                     reset_optimizer=args.reset_optimizer,
+                     gate_min_improvement_floor=args.gate_min_improvement_floor)
 
     dev = dev_mod.resolve(args.device)
     print(f"device: {dev_mod.describe(dev)}")
