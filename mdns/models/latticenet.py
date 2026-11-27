@@ -42,6 +42,28 @@ import torch.nn.functional as F
 from .. import device as dev_mod
 
 
+# ------------------------------------------------------------------- naming
+def sakura_name(*, block: str, n_blocks: int, channels: int, n_heads: int = 0,
+                compression_ratio: int = 1, use_attention: bool = False) -> str:
+    """Canonical model name: ``sakura-b<blocks>c<channels>[h<heads>][nbt<ratio>][tf]``.
+
+    The sample counter is appended by the training loop as ``-s<total samples>``,
+    producing e.g. ``sakura-b6c64h4nbt2tf-s1245184``.
+
+    This string is stored *inside* the checkpoint (``arch["name"]`` and the
+    top-level ``sakura_name``), so renaming ``best.pt`` never changes the
+    identity of the weights.
+    """
+    if block == "nbt":
+        name = f"sakura-b{n_blocks}c{channels}h{n_heads if use_attention else 0}nbt{compression_ratio}"
+        if use_attention:
+            name += "tf"
+        return name
+    if block == "res":
+        return f"sakura-b{n_blocks}c{channels}"
+    return f"sakura-{block}-b{n_blocks}c{channels}h{n_heads}"
+
+
 # ------------------------------------------------------------------ helpers
 def _groups(channels: int) -> int:
     g = math.gcd(channels, 8)
@@ -211,6 +233,11 @@ class LatticeNet(nn.Module):
 
         emb = int(embed_dim or channels)
         self.embed_dim = emb
+        # identity travels with the weights, not with the file name
+        self.name = sakura_name(block=block, n_blocks=int(n_blocks),
+                                channels=self.channels, n_heads=n_heads,
+                                compression_ratio=self.compression_ratio,
+                                use_attention=self.use_attention)
         self.embed = nn.Embedding(self.vocab_size, emb)
         self.stem = (nn.Conv2d(emb, channels, 1, bias=True) if emb != channels
                      else nn.Identity())
@@ -271,7 +298,8 @@ class LatticeNet(nn.Module):
         return sum(p.numel() for p in self.parameters())
 
     def config(self) -> dict:
-        return {"arch": "latticenet", "L": self.L, "vocab_size": self.vocab_size,
+        return {"arch": "latticenet", "name": self.name,
+                "L": self.L, "vocab_size": self.vocab_size,
                 "channels": self.channels, "n_blocks": len(self.blocks),
                 "block": self.block_type, "compression_ratio": self.compression_ratio,
                 "use_attention": self.use_attention, "dtype": self.dtype_name}

@@ -195,6 +195,33 @@ translation-equivariant, and local position is already carried by the conv
 features. LayerScale γ starts at zero so every block is an identity map at
 initialisation.
 
+### Model naming
+
+Every weight set carries a canonical name of the form
+
+```
+sakura-b<blocks>c<channels>h<heads>nbt<compression ratio>tf-s<total samples scanned>
+        │        │          │          │            │   └─ cumulative samples seen so far
+        │        │          │          │            └───── transformer at the bottleneck
+        │        │          │          └────────────────── bottleneck compression ratio (2/3/4)
+        │        │          └───────────────────────────── attention heads
+        │        └──────────────────────────────────────── trunk channels
+        └───────────────────────────────────────────────── residual blocks
+```
+
+e.g. `sakura-b6c64h4nbt2tf-s1474560` is the 6-block / 64-channel / 4-head /
+ratio-2 NBT+Transformer model after 1 474 560 scanned samples. Pure residual and
+ViT models drop the parts that do not apply (`sakura-b4c48`, `sakura-vit-b6c64h4`).
+
+The name lives **inside** the checkpoint (`arch["name"]` holds the architecture
+part, `sakura_name` the full name with the sample counter, `total_samples` the
+raw integer), so moving or renaming `best.pt` never changes the identity of the
+weights. The training loop prints the full name on every round:
+
+```
+  round 60: sakura-b6c64h4nbt2tf-s1474560  beta=1.200 ESS=0.4x loss=... -> promoted  [261.5s]
+```
+
 Backbones are chosen by name from [`mdns/models/registry.py`](mdns/models/registry.py):
 
 | preset | block | C | blocks | ratio | attention | params |

@@ -120,7 +120,12 @@ def build(name: str = DEFAULT_PRESET, *, L: int, vocab_size: int, device=None,
         m.forward = _forward
         # normalise the introspection interface so callers need no special case
         m.num_params = lambda: sum(p.numel() for p in m.parameters())
-        m.config = lambda: {"arch": "ropevit", "L": L, "vocab_size": vocab_size,
+        from .latticenet import sakura_name as _sakura
+
+        m.name = _sakura(block="vit", n_blocks=cfg.get("n_blocks", 6),
+                         channels=cfg.get("channels", 64), n_heads=cfg.get("n_heads", 4))
+        m.config = lambda: {"arch": "ropevit", "name": m.name,
+                            "L": L, "vocab_size": vocab_size,
                             "channels": cfg.get("channels", 64),
                             "n_blocks": cfg.get("n_blocks", 6),
                             "block": "vit", "compression_ratio": 1,
@@ -139,6 +144,7 @@ def build_from_config(cfg: Dict[str, Any], *, L: int, vocab_size: int, device=No
     if arch == "latticenet":
         cfg.pop("L", None)
         cfg.pop("vocab_size", None)
+        cfg.pop("name", None)   # derived, not a constructor argument
         model = LatticeNet(L=L, vocab_size=vocab_size, **cfg)
         return model.to(dev)
     # legacy ViT checkpoints

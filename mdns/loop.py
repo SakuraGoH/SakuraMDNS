@@ -142,6 +142,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
     arch_cfg = model.config()
 
     start_round = 0
+    total_samples = 0          # samples scanned since the very first round
     if cfg.resume:
         ck = torch.load(cfg.resume, map_location=dev, weights_only=False)
         model.load_state_dict(ck["model"])
@@ -158,6 +159,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         # schedule), comparing a new score against it is meaningless, so re-score
         # the incumbent against the *current* reference.
         gate.best_score = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
+        total_samples = int(ck.get("total_samples", 0))
         start_round = int(ck.get("round", -1)) + 1
         print(f"resumed from {cfg.resume}: continuing at round {start_round}; "
               f"incumbent re-scored {stored:+.5f} -> {gate.best_score:+.5f} "
@@ -168,6 +170,9 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
               f"L={cfg.L} q={cfg.q} beta={cfg.beta} optimizer={cfg.optimizer} "
               f"gate={cfg.gate_mode} rounds={cfg.rounds}")
         print(f"reference set: {tuple(reference.shape)} (C++ Swendsen-Wang, gate only)")
+        print(f"model name: {model.name}-s{total_samples}   "
+              f"(arch part is stored inside the checkpoint; the -s<N> counter is the "
+              f"total number of samples scanned so far)")
 
     history: list[dict] = []
     shards: list[tuple[torch.Tensor, torch.Tensor]] = []
@@ -189,6 +194,13 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
               f"The schedule is a no-op: the sampler will stay at that temperature "
               f"for the whole run. Pass --beta <target> --beta-start <warm start> "
               f"for a real ramp.")
+
+    def scan_and_count(reward_fn):
+        """Scan with the EMA weights and account for the samples produced."""
+        nonlocal total_samples
+        res = _scan_with_ema(model, ema, reward_fn, cfg, dev)
+        total_samples += int(cfg.scan_batch)
+        return res
 
     t_start = time.perf_counter()
     reject_streak = 0
@@ -223,7 +235,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         reward = _reward_fn(cfg, beta_r)
 
         # 1 ---------- scan with the current (EMA) weights -------------------
-        x, log_rnd = _scan_with_ema(model, ema, reward, cfg, dev)
+        x, log_rnd = scan_and_count(reward)
         scan_ess = ess(log_rnd)
         shards.append((x, log_rnd))
 
@@ -248,7 +260,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             # handful of samples that dominate the (degenerate) importance
             # weights, which the hold-out gate then correctly rejects.
             if step and cfg.resample_every > 0 and step % cfg.resample_every == 0:
-                pool_x, pool_w = _scan_with_ema(model, ema, reward, cfg, dev)
+                pool_x, pool_w = scan_and_count(reward)
                 n_pool = pool_x.shape[0]
             idx = torch.randint(0, n_pool, (cfg.train_batch,), device=dev)
             loss = masked_denoise_loss(model, pool_w[idx], pool_x[idx], cfg.num_replicates)
@@ -257,6 +269,9 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             opt.step()
             ema.update(params)
             losses.append(loss.item())
+
+        # name of the weights as they stand now: arch + samples scanned so far
+        full_name = f"{model.name}-s{total_samples}"
 
         # 4 ---------- gate -------------------------------------------------
         score = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=beta_r)
@@ -267,6 +282,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         if decision.accepted:
             torch.save({"model": model.state_dict(), "ema": ema.state_dict(),
                         "opt": opt.state_dict(), "arch": arch_cfg,
+                        "sakura_name": full_name, "total_samples": total_samples,
                         "round": r, "score": score}, best_path)
             action = "promoted"
             reject_streak = 0
@@ -288,7 +304,8 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
 
         dev_mod.synchronize(dev)
         dt = time.perf_counter() - t0
-        row = {"round": r, "beta": round(beta_r, 4), "scan_ess": round(scan_ess, 6),
+        row = {"round": r, "model": full_name, "samples": total_samples,
+               "beta": round(beta_r, 4), "scan_ess": round(scan_ess, 6),
                "train_loss_mean": round(float(np.mean(losses)), 4),
                "train_loss_last": round(float(losses[-1]), 4),
                "score_before": None if prev_best is None else round(prev_best, 6),
@@ -301,7 +318,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             with open(out / "metrics.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
         if verbose:
-            print(f"  round {r}: beta={beta_r:.3f} ESS={row['scan_ess']:.4f} "
+            print(f"  round {r}: {full_name}  beta={beta_r:.3f} ESS={row['scan_ess']:.4f} "
                   f"loss={row['train_loss_mean']:.3f} "
                   f"score={row['score_after']:+.5f} "
                   f"(prev {row['score_before']}) -> {action}  [{dt:.1f}s]")
@@ -311,7 +328,10 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                   f"the sampler has stopped improving")
             break
 
+    if verbose and history:
+        print(f"final weights: {history[-1]['model']}")
     metrics = {"config": asdict(cfg), "device": dev_mod.describe(dev),
+               "sakura_name": history[-1]["model"] if history else model.name,
                "arch": arch_cfg, "params": model.num_params(),
                "history": history, "gate_history": gate.history,
                "best_score": gate.best_score,

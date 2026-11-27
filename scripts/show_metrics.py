@@ -20,7 +20,9 @@ def main() -> int:
     else:
         m = json.loads(path.read_text(encoding="utf-8"))
     c, h = m["config"], m["history"]
+    name = m.get("sakura_name") or (h[-1].get("model") if h else "?")
     print(f"{path}")
+    print(f"  model: {name}")
     print(f"  arch={c.get('arch')} overrides={c.get('arch_overrides')} "
           f"L={c.get('L')} q={c.get('q')} params={m.get('params'):,}")
     print(f"  beta {c.get('beta_start')}->{c.get('beta')}  rounds done={len(h)}  "

@@ -148,6 +148,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     model, ckpt, L, N = load_model(args.ckpt, dev, use_ema=not args.no_ema)
     q = N - 1
+    print(f"model={ckpt.get('sakura_name', model.name)}")
     print(f"device={dev_mod.describe(dev)}  ckpt round={ckpt.get('round')}  "
           f"arch={ckpt['arch']['block']} C={ckpt['arch']['channels']} "
           f"blocks={ckpt['arch']['n_blocks']}  params={sum(p.numel() for p in model.parameters()):,}")
@@ -182,7 +183,8 @@ def main() -> int:
     corr_max_err = max(abs(a - b) for k in corr_m for a, b in zip(corr_m[k], corr_r[k]))
 
     report = {
-        "checkpoint": args.ckpt, "round": ckpt.get("round"), "arch": ckpt["arch"],
+        "checkpoint": args.ckpt, "sakura_name": ckpt.get("sakura_name", model.name),
+        "round": ckpt.get("round"), "arch": ckpt["arch"],
         "beta": args.beta, "n_samples": int(x.shape[0]),
         "scan_ess": round(ess_val, 4),
         "energy_per_site": {"mdns": round(float(e_m.mean()), 5),
