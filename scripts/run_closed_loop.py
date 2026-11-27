@@ -57,6 +57,9 @@ def main() -> int:
     p.add_argument("--n-heads", type=int, default=None, help="attention heads")
     p.add_argument("--attn-pos", default=None, choices=["none", "sincos"])
     p.add_argument("--no-attention", action="store_true", help="drop the transformer block")
+    p.add_argument("--compile", action="store_true",
+                   help="torch.compile the scan-only inference copy (bf16). "
+                        "~2.9x faster scan on a 4080S, ~1.7x shorter rounds")
     p.add_argument("--steps-per-round", type=int, default=100)
     p.add_argument("--scan-batch", type=int, default=128)
     p.add_argument("--train-batch", type=int, default=128)
@@ -104,7 +107,8 @@ def main() -> int:
                      keep_shards=args.keep_shards,
                      stop_after_rejects=args.stop_after_rejects,
                      lr_reduce_on_reject=args.lr_reduce_on_reject,
-                     gate_ref_refresh=args.gate_ref_refresh)
+                     gate_ref_refresh=args.gate_ref_refresh,
+                     compile_scan=args.compile)
 
     dev = dev_mod.resolve(args.device)
     print(f"device: {dev_mod.describe(dev)}")

@@ -33,6 +33,7 @@ zero padding would invent a boundary the Hamiltonian does not have.
 from __future__ import annotations
 
 import math
+from contextlib import nullcontext
 from typing import Optional
 
 import torch
@@ -218,7 +219,8 @@ class LatticeNet(nn.Module):
                  block: str = "res", compression_ratio: int = 4, n_inner: int = 2,
                  use_attention: bool = True, n_heads: int = 4, mlp_ratio: float = 2.0,
                  attn_pos: str = "none", embed_dim: Optional[int] = None,
-                 ls_init: float = 1e-4, dtype: str = "bfloat16"):
+                 ls_init: float = 1e-4, dtype: str = "bfloat16",
+                 autocast: bool = True):
         super().__init__()
         if block not in ("res", "nbt"):
             raise ValueError(f"unknown block type {block!r}; expected 'res' or 'nbt'")
@@ -230,6 +232,10 @@ class LatticeNet(nn.Module):
         self.compression_ratio = int(compression_ratio) if block == "nbt" else 1
         self.use_attention = bool(use_attention) and block == "nbt"
         self.dtype_name = dtype
+        # torch.compile cannot trace through the autocast context below: dynamo
+        # re-traces endlessly (measured: 1.2 s per call instead of 13 ms).  A
+        # compiled inference copy is built with autocast=False and bf16 weights.
+        self.autocast_enabled = bool(autocast)
 
         emb = int(embed_dim or channels)
         self.embed_dim = emb
@@ -280,7 +286,9 @@ class LatticeNet(nn.Module):
 
     def logits(self, x: torch.Tensor) -> torch.Tensor:
         """x: (B, D) int in [0, vocab) -> raw logits (B, D, vocab)."""
-        with dev_mod.autocast(x.device, enabled=True):
+        ctx = dev_mod.autocast(x.device, enabled=True) if self.autocast_enabled \
+            else nullcontext()
+        with ctx:
             h = self._features(x)
             h = self.head(h)
         return h.permute(0, 2, 3, 1).reshape(x.shape[0], self.length, self.vocab_size)
@@ -302,4 +310,5 @@ class LatticeNet(nn.Module):
                 "L": self.L, "vocab_size": self.vocab_size,
                 "channels": self.channels, "n_blocks": len(self.blocks),
                 "block": self.block_type, "compression_ratio": self.compression_ratio,
+                "autocast": self.autocast_enabled,
                 "use_attention": self.use_attention, "dtype": self.dtype_name}

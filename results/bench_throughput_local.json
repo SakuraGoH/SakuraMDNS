@@ -1,0 +1,101 @@
+{
+  "device": "xpu (Intel(R) Arc(TM) Graphics, 112 EU, 22609 MB)",
+  "arch": "sakura-b6c64h4nbt2tf",
+  "params": 95876,
+  "L": 16,
+  "q": 3,
+  "beta": 1.2,
+  "scans": [
+    {
+      "batch": 512,
+      "scan_s": 106.107,
+      "samples_per_s": 4.8,
+      "ess_over_batch": 0.0025,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 1024,
+      "scan_s": 241.224,
+      "samples_per_s": 4.2,
+      "ess_over_batch": 0.0011,
+      "effective_per_s": 0.0
+    }
+  ],
+  "forward_ms": {
+    "eager": 870.26
+  },
+  "round_projection": [
+    {
+      "batch": 512,
+      "resample_every": 5,
+      "scans_per_round": 120,
+      "samples_per_round": 61440,
+      "round_s": 13111.8,
+      "samples_per_s": 4.7,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 512,
+      "resample_every": 10,
+      "scans_per_round": 60,
+      "samples_per_round": 30720,
+      "round_s": 6728.8,
+      "samples_per_s": 4.6,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 512,
+      "resample_every": 25,
+      "scans_per_round": 24,
+      "samples_per_round": 12288,
+      "round_s": 2930.3,
+      "samples_per_s": 4.2,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 512,
+      "resample_every": 50,
+      "scans_per_round": 12,
+      "samples_per_round": 6144,
+      "round_s": 1661.9,
+      "samples_per_s": 3.7,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 1024,
+      "resample_every": 5,
+      "scans_per_round": 120,
+      "samples_per_round": 122880,
+      "round_s": 29510.3,
+      "samples_per_s": 4.2,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 1024,
+      "resample_every": 10,
+      "scans_per_round": 60,
+      "samples_per_round": 61440,
+      "round_s": 14843.5,
+      "samples_per_s": 4.1,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 1024,
+      "resample_every": 25,
+      "scans_per_round": 24,
+      "samples_per_round": 24576,
+      "round_s": 6161.0,
+      "samples_per_s": 4.0,
+      "effective_per_s": 0.0
+    },
+    {
+      "batch": 1024,
+      "resample_every": 50,
+      "scans_per_round": 12,
+      "samples_per_round": 12288,
+      "round_s": 3268.2,
+      "samples_per_s": 3.8,
+      "effective_per_s": 0.0
+    }
+  ]
+}

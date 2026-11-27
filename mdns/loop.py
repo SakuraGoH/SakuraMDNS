@@ -54,6 +54,10 @@ class LoopConfig:
     lr_reduce_on_reject: float = 0.0   # multiply LR on rejection (0 = off)
     lr_min: float = 1e-5
     log_jsonl: bool = True        # append one JSON line per round
+    # torch.compile the *scan-only* inference copy (bf16 weights, autocast off).
+    # Measured on a 4080S at L=16: forward 29.5 ms -> 10.2 ms (2.9x), which cuts
+    # a round from ~262 s to ~155 s.  Training keeps the fp32 master weights.
+    compile_scan: bool = False
     gate_ref_refresh: int = 0     # re-draw the gate reference every N rounds (0 = never)
     L: int = 8
     q: int = 3
@@ -135,6 +139,23 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
     params = list(model.parameters())
     ema = EMA(params, decay=cfg.ema_decay)
     opt = build_optimizer(model, kind=cfg.optimizer, lr=cfg.lr)
+
+    # Scan-only compiled copy: the master model stays fp32 for training and for
+    # the gate (whose float32 score resolution we rely on), while the O(D)
+    # sequential forward pass -- 68% of a round -- runs compiled in bf16.
+    scan_model = None
+    if cfg.compile_scan:
+        import copy
+
+        scan_model = copy.deepcopy(model).to(torch.bfloat16)
+        scan_model.autocast_enabled = False      # autocast breaks dynamo tracing
+        scan_model.eval()
+        scan_model = torch.compile(scan_model)
+        if verbose:
+            print("compile_scan: built a compiled bf16 inference copy "
+                  "(first scan will trigger compilation)")
+        with torch.no_grad():                    # trigger compilation off the clock
+            scan(scan_model, lambda t: t.float().sum(dim=1) * 0, 64, dev)
     reference = make_reference(cfg, dev, cfg.gate_ref_size)
     gate = Gatekeeper(mode=cfg.gate_mode, min_improvement=cfg.gate_min_improvement,
                       patience=cfg.gate_patience)
@@ -195,10 +216,19 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
               f"for the whole run. Pass --beta <target> --beta-start <warm start> "
               f"for a real ramp.")
 
+    def _push_ema_into_scan_model():
+        with torch.no_grad():
+            for p, s in zip(scan_model.parameters(), ema.shadow):
+                p.copy_(s)                       # fp32 -> bf16 cast happens here
+
     def scan_and_count(reward_fn):
         """Scan with the EMA weights and account for the samples produced."""
         nonlocal total_samples
-        res = _scan_with_ema(model, ema, reward_fn, cfg, dev)
+        if scan_model is not None:
+            _push_ema_into_scan_model()
+            res = scan(scan_model, reward_fn, cfg.scan_batch, dev)
+        else:
+            res = _scan_with_ema(model, ema, reward_fn, cfg, dev)
         total_samples += int(cfg.scan_batch)
         return res
 
