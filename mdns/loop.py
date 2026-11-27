@@ -358,6 +358,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                     break
         s_final = _score_with_ema(model, ema, gate, reference, cfg, dev, beta=cfg.beta)
         caught = target is None or s_final >= target
+        _warmed = True
         print(f"warmup finished after {step + 1} steps: score {s_final:+.5f} "
               f"({'caught up with the previous model' if caught else 'STILL BEHIND'})")
         # Persist it as the incumbent so a rollback returns here, not to the old model.
@@ -370,7 +371,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
                     "model": model.state_dict(), "ema": ema.state_dict(),
                     "opt": opt.state_dict(), "warmup": True,
                     "sakura_name": f"{model.name}-s{total_samples}",
-                    "total_samples": total_samples}, best_path)
+                    "total_samples": total_samples, "warmup": _warmed}, best_path)
 
     for r in range(start_round, limit):
         if cfg.max_hours and (time.perf_counter() - t_start) / 3600.0 >= cfg.max_hours:
@@ -473,7 +474,7 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             torch.save({"model": model.state_dict(), "ema": ema.state_dict(),
                         "opt": opt.state_dict(), "arch": arch_cfg,
                         "sakura_name": full_name, "total_samples": total_samples,
-                        "round": r, "score": score}, best_path)
+                        "round": r, "score": score, "warmup": _warmed}, best_path)
             action = "promoted"
             reject_streak = 0
         elif not best_path.exists():
