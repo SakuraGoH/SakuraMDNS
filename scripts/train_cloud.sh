@@ -24,7 +24,7 @@ STAGE_B_HOURS="${STAGE_B_HOURS:-3.4}"
 # 4 attention heads, transformer in every block (measured 7.4 s / scan @ B=1024)
 ARCH_ARGS="--arch nbt-2 --n-blocks 6 --channels 64 --compression-ratio 2 --n-inner 2 --n-heads 4"
 
-COMMON="--L 16 --q 3 --optimizer muon --lr 0.01 \
+COMMON="--L 16 --q 3 --optimizer muon --lr 0.01 --compile --compile-train \
         --steps-per-round 600 --resample-every 25 --scan-batch 1024 \
         --gate-mode holdout_nll --gate-ref-size 2048 --gate-min-improvement 1e-4 \
         --out-dir ${OUT}"

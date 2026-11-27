@@ -40,6 +40,7 @@ COMMON="--L 16 --q 3 --rounds 0 --anneal-rounds ${ANNEAL_ROUNDS} \
         --gate-ref-refresh 20 \
         --keep-shards 40 \
         --lr-reduce-on-reject 0.7 \
+        --compile --compile-train \
         --out-dir ${OUT}"
 
 cd "$PROJ" || exit 1

@@ -57,6 +57,9 @@ def main() -> int:
     p.add_argument("--n-heads", type=int, default=None, help="attention heads")
     p.add_argument("--attn-pos", default=None, choices=["none", "sincos"])
     p.add_argument("--no-attention", action="store_true", help="drop the transformer block")
+    p.add_argument("--compile-train", action="store_true",
+                   help="also torch.compile the training forward+loss (needs --compile "
+                        "or works alone; hoists autocast out of the model)")
     p.add_argument("--compile", action="store_true",
                    help="torch.compile the scan-only inference copy (bf16). "
                         "~2.9x faster scan on a 4080S, ~1.7x shorter rounds")
@@ -64,6 +67,9 @@ def main() -> int:
     p.add_argument("--scan-batch", type=int, default=128)
     p.add_argument("--train-batch", type=int, default=128)
     p.add_argument("--num-replicates", type=int, default=8)
+    p.add_argument("--max-samples-per-round", type=int, default=0,
+                   help="hard cap on samples produced per round; 0 = no cap. "
+                        "samples/round = scan_batch * (1 + (steps_per_round-1)//resample_every)")
     p.add_argument("--resample-every", type=int, default=10,
                    help="re-scan every N optimizer steps (paper default 10)")
     p.add_argument("--optimizer", default="muon", choices=["muon", "adamw"])
@@ -108,7 +114,9 @@ def main() -> int:
                      stop_after_rejects=args.stop_after_rejects,
                      lr_reduce_on_reject=args.lr_reduce_on_reject,
                      gate_ref_refresh=args.gate_ref_refresh,
-                     compile_scan=args.compile)
+                     compile_scan=args.compile,
+                     max_samples_per_round=args.max_samples_per_round,
+                     compile_train=args.compile_train)
 
     dev = dev_mod.resolve(args.device)
     print(f"device: {dev_mod.describe(dev)}")

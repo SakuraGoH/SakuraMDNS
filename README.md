@@ -274,10 +274,16 @@ full study are in [results/RESULTS_throughput.md](results/RESULTS_throughput.md)
 
 | knob | effect | verdict |
 |---|---|---|
-| `--compile` (compiled bf16 scan copy) | forward 29.5 → 10.2 ms; round 262 → ~191 s | **+37% samples/s** ✅ |
-| `--resample-every 10` (vs 25) | more scans per round | +24%, stacks with compile ✅ |
+| `--compile` (scan-only, compiled bf16 copy) | forward 29.5 → 10.2 ms; scan 6.8 → 3.0 s | round 88.6 → 51.3 s |
+| `--compile-train` (also compile the training forward+loss) | step 135 → 86 ms | round 51.3 → **41.4 s** |
+| both together | vs eager | **2.14× shorter rounds**, ~94 → ~198 samples/s |
+| `--resample-every 10` (vs 25) | more scans per round | +24%, stacks with compile |
 | larger `--scan-batch` | 1024 → 66.7, 4096 → 60.7 samples/s | ❌ no gain on one GPU |
 | K concurrent scan processes | 1.14× (K=2), 1.20× (K=4) | ❌ GPU is already 98% busy |
+
+Per-round sample budget is `scan_batch * (1 + (steps_per_round-1)//resample_every)`,
+optionally hard-capped with `--max-samples-per-round`. The loop prints it at
+startup (`samples/round = 1024 x (1 + 23) = 24576`).
 
 The scan is O(D) sequential forward passes (D = L²), which is why it dominates a
 round. Compiling it is the only single-GPU lever worth pulling; parallelism pays

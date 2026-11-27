@@ -58,6 +58,10 @@ class LoopConfig:
     # Measured on a 4080S at L=16: forward 29.5 ms -> 10.2 ms (2.9x), which cuts
     # a round from ~262 s to ~155 s.  Training keeps the fp32 master weights.
     compile_scan: bool = False
+    # torch.compile the training forward+loss too.  Requires moving the autocast
+    # context out of LatticeNet.logits (dynamo cannot trace it), which is done
+    # here by flipping model.autocast_enabled and wrapping the loss call instead.
+    compile_train: bool = False
     gate_ref_refresh: int = 0     # re-draw the gate reference every N rounds (0 = never)
     L: int = 8
     q: int = 3
@@ -68,6 +72,7 @@ class LoopConfig:
     rounds: int = 6
     steps_per_round: int = 100
     resample_every: int = 10     # re-scan every N optimizer steps (paper default: 10)
+    max_samples_per_round: int = 0   # hard cap on samples produced per round (0 = no cap)
     scan_batch: int = 128
     train_batch: int = 128
     num_replicates: int = 8
@@ -154,8 +159,9 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
         if verbose:
             print("compile_scan: built a compiled bf16 inference copy "
                   "(first scan will trigger compilation)")
-        with torch.no_grad():                    # trigger compilation off the clock
-            scan(scan_model, lambda t: t.float().sum(dim=1) * 0, 64, dev)
+        with torch.no_grad():                    # compile at the real shape, off the clock
+            _warm_reward = _reward_fn(cfg, cfg.beta_start)
+            scan(scan_model, _warm_reward, cfg.scan_batch, dev)
     reference = make_reference(cfg, dev, cfg.gate_ref_size)
     gate = Gatekeeper(mode=cfg.gate_mode, min_improvement=cfg.gate_min_improvement,
                       patience=cfg.gate_patience)
@@ -215,6 +221,30 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
               f"The schedule is a no-op: the sampler will stay at that temperature "
               f"for the whole run. Pass --beta <target> --beta-start <warm start> "
               f"for a real ramp.")
+
+    # Training forward: optionally compiled.  The master model keeps fp32 weights;
+    # the autocast context is hoisted out of the model (see LatticeNet.autocast_enabled)
+    # and around the compiled call, which is what makes it traceable.
+    if cfg.compile_train and dev.type != "cpu":
+        model.autocast_enabled = False
+        _compiled_loss = torch.compile(masked_denoise_loss, dynamic=False)
+        if verbose:
+            print("compile_train: training forward+loss compiled "
+                  "(first training step will trigger compilation)")
+
+        def train_loss(model_, weights, samples, reps):
+            with dev_mod.autocast(dev, enabled=True):
+                return _compiled_loss(model_, weights, samples, reps)
+
+        # one throw-away step at the real shapes; gradients are discarded
+        _xm = torch.randint(0, cfg.q + 1, (cfg.train_batch, cfg.L * cfg.L), device=dev)
+        _wm = torch.zeros(cfg.train_batch, device=dev)
+        train_loss(model, _wm, _xm, cfg.num_replicates).backward()
+        opt.zero_grad(set_to_none=True)
+        if verbose:
+            print("compile_train: warmed up at the real shapes")
+    else:
+        train_loss = masked_denoise_loss
 
     def _push_ema_into_scan_model():
         with torch.no_grad():
@@ -284,16 +314,31 @@ def run_loop(cfg: LoopConfig, device=None, verbose: bool = True) -> dict:
             pool_w = torch.cat([s[1] for s in shards], dim=0)
         n_pool = pool_x.shape[0]
         losses = []
+        # How many rescans this round will do.  samples/round = scan_batch * (1 + n_rescans),
+        # so this is the single place that decides the per-round sample budget.
+        n_rescans = ((cfg.steps_per_round - 1) // cfg.resample_every
+                     if cfg.resample_every > 0 else 0)
+        if cfg.max_samples_per_round > 0:
+            cap = max(0, cfg.max_samples_per_round // cfg.scan_batch - 1)
+            n_rescans = min(n_rescans, cap)
+        rescans_done = 0
+        if verbose and r == start_round:
+            print(f"samples/round = {cfg.scan_batch} x (1 + {n_rescans}) = "
+                  f"{cfg.scan_batch * (1 + n_rescans)}"
+                  + (f"   [capped by --max-samples-per-round "
+                     f"{cfg.max_samples_per_round}]" if cfg.max_samples_per_round else ""))
         model.train()
         for step in range(cfg.steps_per_round):
             # Re-scan periodically: reusing one scan for many steps overfits the
             # handful of samples that dominate the (degenerate) importance
             # weights, which the hold-out gate then correctly rejects.
-            if step and cfg.resample_every > 0 and step % cfg.resample_every == 0:
+            if (step and cfg.resample_every > 0 and step % cfg.resample_every == 0
+                    and rescans_done < n_rescans):
                 pool_x, pool_w = scan_and_count(reward)
                 n_pool = pool_x.shape[0]
+                rescans_done += 1
             idx = torch.randint(0, n_pool, (cfg.train_batch,), device=dev)
-            loss = masked_denoise_loss(model, pool_w[idx], pool_x[idx], cfg.num_replicates)
+            loss = train_loss(model, pool_w[idx], pool_x[idx], cfg.num_replicates)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()
