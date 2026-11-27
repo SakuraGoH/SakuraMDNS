@@ -1,0 +1,12 @@
+# Core runtime.  torch must be installed manually to pick the right build:
+#   CUDA :  pip install torch --index-url https://download.pytorch.org/whl/cu121
+#   Intel:  pip install torch --index-url https://download.pytorch.org/whl/xpu
+#   CPU  :  pip install torch
+torch>=2.4
+numpy>=1.24
+matplotlib>=3.6
+tqdm>=4.65
+
+# Only needed for the legacy RopeViT baseline (`--arch vit-64x6`).
+# The default LatticeNet backbones do not import timm.
+timm>=0.9

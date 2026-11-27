@@ -1,0 +1,163 @@
+{
+  "exact": [
+    {
+      "sampler": "ising_cb",
+      "model": "ising",
+      "L": 4,
+      "beta": 0.4407,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00391,
+      "label_symmetry_dev": 0.00322,
+      "pass": true
+    },
+    {
+      "sampler": "ising_wolff",
+      "model": "ising",
+      "L": 4,
+      "beta": 0.4407,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00691,
+      "label_symmetry_dev": 0.00583,
+      "pass": true
+    },
+    {
+      "sampler": "ising_wolff",
+      "model": "ising",
+      "L": 4,
+      "beta": 0.6,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00185,
+      "label_symmetry_dev": 0.00635,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "L": 3,
+      "beta": 1.005,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00749,
+      "label_symmetry_dev": 0.00365,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "L": 3,
+      "beta": 1.2,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00394,
+      "label_symmetry_dev": 0.00371,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "L": 3,
+      "beta": 0.5,
+      "n": 30720,
+      "hamiltonian_max_err": 0.0,
+      "tv_energy": 0.00809,
+      "label_symmetry_dev": 0.00329,
+      "pass": true
+    }
+  ],
+  "cross_check": [
+    {
+      "sampler": "potts_cb",
+      "model": "potts",
+      "L": 4,
+      "beta": 1.005,
+      "reference": "potts_sw",
+      "tv_vs_cpp": 0.01221,
+      "mean_e_cpp": -1.70858,
+      "mean_e_gpu": -1.707,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "L": 4,
+      "beta": 1.005,
+      "reference": "potts_sw",
+      "tv_vs_cpp": 0.00859,
+      "mean_e_cpp": -1.70858,
+      "mean_e_gpu": -1.70678,
+      "pass": true
+    },
+    {
+      "sampler": "potts_cb",
+      "model": "potts",
+      "L": 8,
+      "beta": 1.2,
+      "reference": "potts_sw",
+      "tv_vs_cpp": 0.01294,
+      "mean_e_cpp": -1.89789,
+      "mean_e_gpu": -1.89786,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "L": 8,
+      "beta": 1.2,
+      "reference": "potts_sw",
+      "tv_vs_cpp": 0.01465,
+      "mean_e_cpp": -1.89789,
+      "mean_e_gpu": -1.89847,
+      "pass": true
+    }
+  ],
+  "equilibration_l16": [
+    {
+      "sampler": "ising_cb",
+      "model": "ising",
+      "beta": 0.4407,
+      "reference": -1.45504,
+      "gpu": -1.45648,
+      "delta": -0.00144,
+      "pass": true
+    },
+    {
+      "sampler": "ising_wolff",
+      "model": "ising",
+      "beta": 0.4407,
+      "reference": -1.45504,
+      "gpu": -1.44936,
+      "delta": 0.00568,
+      "pass": true
+    },
+    {
+      "sampler": "potts_cb",
+      "model": "potts",
+      "beta": 1.2,
+      "reference": -1.89777,
+      "gpu": -1.89845,
+      "delta": -0.00068,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "beta": 1.2,
+      "reference": -1.89777,
+      "gpu": -1.89807,
+      "delta": -0.0003,
+      "pass": true
+    },
+    {
+      "sampler": "potts_wolff",
+      "model": "potts",
+      "beta": 1.005,
+      "reference": -1.61939,
+      "gpu": -1.62415,
+      "delta": -0.00477,
+      "pass": true
+    }
+  ]
+}

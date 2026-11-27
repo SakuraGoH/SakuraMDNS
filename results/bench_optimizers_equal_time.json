@@ -1,0 +1,12 @@
+{
+  "per_step_ms": {
+    "adamw": 85.84492333369174,
+    "muon": 117.20542666638114
+  },
+  "equal_time": {
+    "adamw_steps": 409,
+    "adamw_nll": 0.48046875,
+    "muon_steps": 300,
+    "muon_nll": 0.4775390625
+  }
+}

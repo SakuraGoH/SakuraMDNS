@@ -1,0 +1,102 @@
+{
+  "settings": {
+    "burn_in_sweeps": 2000,
+    "n_collect": 100,
+    "collect_every": 10,
+    "B": 256
+  },
+  "models": {
+    "ising_beta0.4407": {
+      "beta": 0.4407,
+      "q": null,
+      "reference_kind": "ising_sw",
+      "reference_energy_per_site": -1.454191,
+      "kernels": {
+        "ising_mh": {
+          "energy_per_site": -1.452289,
+          "stderr": 0.001086,
+          "delta_vs_reference": 0.001902,
+          "consistent": true
+        },
+        "ising_sw": {
+          "energy_per_site": -1.454191,
+          "stderr": 0.001083,
+          "delta_vs_reference": 0.0,
+          "consistent": true
+        }
+      }
+    },
+    "ising_beta0.6": {
+      "beta": 0.6,
+      "q": null,
+      "reference_kind": "ising_sw",
+      "reference_energy_per_site": -1.909016,
+      "kernels": {
+        "ising_mh": {
+          "energy_per_site": -1.908979,
+          "stderr": 0.000364,
+          "delta_vs_reference": 3.6e-05,
+          "consistent": true
+        },
+        "ising_sw": {
+          "energy_per_site": -1.909016,
+          "stderr": 0.000367,
+          "delta_vs_reference": 0.0,
+          "consistent": true
+        }
+      }
+    },
+    "potts_beta1.2": {
+      "beta": 1.2,
+      "q": 3,
+      "reference_kind": "potts_sw",
+      "reference_energy_per_site": -1.897599,
+      "kernels": {
+        "potts_mh": {
+          "energy_per_site": -1.897907,
+          "stderr": 0.000288,
+          "delta_vs_reference": -0.000308,
+          "consistent": true
+        },
+        "potts_glauber": {
+          "energy_per_site": -1.898489,
+          "stderr": 0.000287,
+          "delta_vs_reference": -0.00089,
+          "consistent": true
+        },
+        "potts_sw": {
+          "energy_per_site": -1.897599,
+          "stderr": 0.000289,
+          "delta_vs_reference": 0.0,
+          "consistent": true
+        }
+      }
+    },
+    "potts_beta1.005": {
+      "beta": 1.005,
+      "q": 3,
+      "reference_kind": "potts_sw",
+      "reference_energy_per_site": -1.62174,
+      "kernels": {
+        "potts_mh": {
+          "energy_per_site": -1.622304,
+          "stderr": 0.000753,
+          "delta_vs_reference": -0.000564,
+          "consistent": true
+        },
+        "potts_glauber": {
+          "energy_per_site": -1.621836,
+          "stderr": 0.000754,
+          "delta_vs_reference": -9.6e-05,
+          "consistent": true
+        },
+        "potts_sw": {
+          "energy_per_site": -1.62174,
+          "stderr": 0.000751,
+          "delta_vs_reference": 0.0,
+          "consistent": true
+        }
+      }
+    }
+  }
+}

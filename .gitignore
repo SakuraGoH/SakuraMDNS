@@ -1,0 +1,33 @@
+# ---- python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# ---- native sampler build artifacts ----
+# rebuilt by scripts/build_cpp.ps1 (Windows/MSVC) or the g++ line in the README
+mdns/samplers/build/*.dll
+mdns/samplers/build/*.so
+mdns/samplers/build/*.dylib
+mdns/samplers/build/*.obj
+mdns/samplers/build/*.exp
+mdns/samplers/build/*.lib
+mdns/samplers/build/build.log
+mdns/samplers/build/build_cmd.bat
+
+# ---- training artifacts ----
+runs/
+logs/
+*.pt
+
+# upstream MDNS checkpoints (~93 MB); kept out of git, see README
+checkpoints/
+
+# keep the single checkpoint that documents results/RESULTS_train_3h.md
+!results/remote_L16/best.pt
+
+# ---- caches / os ----
+torchinductor_*/
+.DS_Store
+Thumbs.db

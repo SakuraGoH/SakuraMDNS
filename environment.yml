@@ -1,0 +1,26 @@
+name: mdns
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - numpy
+  - matplotlib
+  - tqdm
+  - pip
+  - pip:
+      # the backbones are built on timm's Mlp / DropPath / trunc_normal_
+      - timm
+      - notebook
+      - pytest
+
+# Removed (verified unused by grep after the Item 8 cleanup):
+#   torchvision, torchaudio  -- no vision datasets or audio
+#   einops                   -- never imported
+#   omegaconf, pyyaml        -- configs are plain dicts / argparse
+#   huggingface_hub          -- only used by the deleted hf_checkpoint_load()
+#
+# This machine runs the Intel XPU build instead:
+#   pip install torch --index-url https://download.pytorch.org/whl/xpu

@@ -1,0 +1,118 @@
+{
+  "device": "xpu (Intel(R) Arc(TM) Graphics, 112 EU, 22609 MB)",
+  "preset": "res-s",
+  "L": 16,
+  "q": 3,
+  "beta": 1.005,
+  "orthogonality": {
+    "min_sv": 0.6766734719276428,
+    "max_sv": 1.1361192464828491,
+    "mean_sv": 0.8413191437721252,
+    "sv_std": 0.14850261807441711
+  },
+  "param_split": "muon 8 tensors / 0.1659M params, adamw 33 tensors / 0.0018M params (98.9% of weights are orthogonalised)",
+  "lr_sweep": [
+    {
+      "optimizer": "adamw",
+      "lr": 0.0005,
+      "steps": 120,
+      "seconds": 128.13,
+      "first_loss": 1.1094,
+      "last_loss": 0.4863,
+      "val_nll": 0.4883,
+      "steps_per_s": 0.94
+    },
+    {
+      "optimizer": "adamw",
+      "lr": 0.001,
+      "steps": 120,
+      "seconds": 22.57,
+      "first_loss": 1.0859,
+      "last_loss": 0.4883,
+      "val_nll": 0.4854,
+      "steps_per_s": 5.32
+    },
+    {
+      "optimizer": "adamw",
+      "lr": 0.002,
+      "steps": 120,
+      "seconds": 19.81,
+      "first_loss": 1.1016,
+      "last_loss": 0.5273,
+      "val_nll": 0.4854,
+      "steps_per_s": 6.06
+    },
+    {
+      "optimizer": "adamw",
+      "lr": 0.004,
+      "steps": 120,
+      "seconds": 20.71,
+      "first_loss": 1.1484,
+      "last_loss": 0.4746,
+      "val_nll": 0.4883,
+      "steps_per_s": 5.79
+    },
+    {
+      "optimizer": "muon",
+      "lr": 0.005,
+      "steps": 120,
+      "seconds": 49.54,
+      "first_loss": 1.1016,
+      "last_loss": 0.4727,
+      "val_nll": 0.4854,
+      "steps_per_s": 2.42
+    },
+    {
+      "optimizer": "muon",
+      "lr": 0.01,
+      "steps": 120,
+      "seconds": 130.28,
+      "first_loss": 1.1172,
+      "last_loss": 0.4629,
+      "val_nll": 0.4824,
+      "steps_per_s": 0.92
+    },
+    {
+      "optimizer": "muon",
+      "lr": 0.02,
+      "steps": 120,
+      "seconds": 16.0,
+      "first_loss": 1.1094,
+      "last_loss": 0.4629,
+      "val_nll": 0.4834,
+      "steps_per_s": 7.5
+    },
+    {
+      "optimizer": "muon",
+      "lr": 0.04,
+      "steps": 120,
+      "seconds": 40.02,
+      "first_loss": 1.1016,
+      "last_loss": 0.4629,
+      "val_nll": 0.4844,
+      "steps_per_s": 3.0
+    }
+  ],
+  "final": [
+    {
+      "optimizer": "adamw",
+      "lr": 0.001,
+      "steps": 300,
+      "seconds": 39.21,
+      "first_loss": 1.0859,
+      "last_loss": 0.5508,
+      "val_nll": 0.4834,
+      "steps_per_s": 7.65
+    },
+    {
+      "optimizer": "muon",
+      "lr": 0.01,
+      "steps": 300,
+      "seconds": 101.49,
+      "first_loss": 1.1016,
+      "last_loss": 0.5352,
+      "val_nll": 0.4775,
+      "steps_per_s": 2.96
+    }
+  ]
+}

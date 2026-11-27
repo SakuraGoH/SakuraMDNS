@@ -1,0 +1,67 @@
+device: cuda (NVIDIA GeForce RTX 4080 SUPER, 32230 MB)
+device=cuda (NVIDIA GeForce RTX 4080 SUPER, 32230 MB) arch=res-s params=0.1677M L=16 q=3 beta=1.2 optimizer=muon gate=holdout_nll rounds=55
+reference set: (2048, 256) (C++ Swendsen-Wang, gate only)
+  round 0: beta=0.200 ESS=0.0260 loss=2.184 score=-1.07124 (prev None) -> promoted  [157.3s]
+  round 1: beta=0.219 ESS=0.0444 loss=2.178 score=-1.04450 (prev -1.071239) -> promoted  [155.9s]
+  round 2: beta=0.237 ESS=0.2383 loss=2.172 score=-1.01183 (prev -1.0445) -> promoted  [155.8s]
+  round 3: beta=0.256 ESS=0.4599 loss=2.167 score=-0.98000 (prev -1.011832) -> promoted  [155.9s]
+  round 4: beta=0.274 ESS=0.6474 loss=2.163 score=-0.95125 (prev -0.980001) -> promoted  [156.1s]
+  round 5: beta=0.293 ESS=0.7298 loss=2.155 score=-0.93071 (prev -0.951246) -> promoted  [155.4s]
+  round 6: beta=0.311 ESS=0.7905 loss=2.151 score=-0.91332 (prev -0.930712) -> promoted  [155.9s]
+  round 7: beta=0.330 ESS=0.8086 loss=2.145 score=-0.89861 (prev -0.913318) -> promoted  [155.9s]
+  round 8: beta=0.348 ESS=0.8200 loss=2.137 score=-0.87862 (prev -0.898609) -> promoted  [156.1s]
+  round 9: beta=0.367 ESS=0.8201 loss=2.130 score=-0.86247 (prev -0.878618) -> promoted  [155.6s]
+  round 10: beta=0.385 ESS=0.8000 loss=2.123 score=-0.84350 (prev -0.862471) -> promoted  [156.1s]
+  round 11: beta=0.404 ESS=0.8163 loss=2.113 score=-0.82642 (prev -0.843496) -> promoted  [156.0s]
+  round 12: beta=0.422 ESS=0.7892 loss=2.106 score=-0.81055 (prev -0.826419) -> promoted  [155.9s]
+  round 13: beta=0.441 ESS=0.8077 loss=2.096 score=-0.79410 (prev -0.810551) -> promoted  [155.4s]
+  round 14: beta=0.459 ESS=0.7814 loss=2.087 score=-0.77560 (prev -0.794103) -> promoted  [155.7s]
+  round 15: beta=0.478 ESS=0.7540 loss=2.076 score=-0.75867 (prev -0.775599) -> promoted  [156.0s]
+  round 16: beta=0.496 ESS=0.7838 loss=2.064 score=-0.74151 (prev -0.758674) -> promoted  [155.4s]
+  round 17: beta=0.515 ESS=0.7939 loss=2.054 score=-0.72194 (prev -0.741507) -> promoted  [155.7s]
+  round 18: beta=0.533 ESS=0.7822 loss=2.040 score=-0.70069 (prev -0.721937) -> promoted  [155.7s]
+  round 19: beta=0.552 ESS=0.7736 loss=2.027 score=-0.67742 (prev -0.700686) -> promoted  [155.4s]
+  round 20: beta=0.570 ESS=0.7767 loss=2.013 score=-0.65659 (prev -0.67742) -> promoted  [155.3s]
+  round 21: beta=0.589 ESS=0.7230 loss=1.999 score=-0.63055 (prev -0.65659) -> promoted  [155.5s]
+  round 22: beta=0.607 ESS=0.7233 loss=1.982 score=-0.60940 (prev -0.630546) -> promoted  [155.8s]
+  round 23: beta=0.626 ESS=0.7385 loss=1.967 score=-0.59164 (prev -0.609402) -> promoted  [155.5s]
+  round 24: beta=0.644 ESS=0.7544 loss=1.948 score=-0.56867 (prev -0.591642) -> promoted  [155.3s]
+  round 25: beta=0.663 ESS=0.7737 loss=1.931 score=-0.54443 (prev -0.568669) -> promoted  [155.6s]
+  round 26: beta=0.681 ESS=0.7119 loss=1.909 score=-0.52181 (prev -0.544425) -> promoted  [155.5s]
+  round 27: beta=0.700 ESS=0.6792 loss=1.889 score=-0.49666 (prev -0.521813) -> promoted  [155.2s]
+  round 28: beta=0.719 ESS=0.7108 loss=1.866 score=-0.47628 (prev -0.496657) -> promoted  [155.7s]
+  round 29: beta=0.737 ESS=0.6223 loss=1.843 score=-0.44883 (prev -0.476278) -> promoted  [155.6s]
+  round 30: beta=0.756 ESS=0.6958 loss=1.817 score=-0.42635 (prev -0.448835) -> promoted  [155.6s]
+  round 31: beta=0.774 ESS=0.6692 loss=1.788 score=-0.40173 (prev -0.426352) -> promoted  [155.8s]
+  round 32: beta=0.793 ESS=0.6337 loss=1.762 score=-0.38275 (prev -0.401729) -> promoted  [155.4s]
+  round 33: beta=0.811 ESS=0.6353 loss=1.726 score=-0.36067 (prev -0.382747) -> promoted  [155.5s]
+  round 34: beta=0.830 ESS=0.6162 loss=1.693 score=-0.33530 (prev -0.360671) -> promoted  [155.4s]
+  round 35: beta=0.848 ESS=0.4796 loss=1.655 score=-0.31403 (prev -0.335299) -> promoted  [155.3s]
+  round 36: beta=0.867 ESS=0.5541 loss=1.615 score=-0.29164 (prev -0.314032) -> promoted  [155.4s]
+  round 37: beta=0.885 ESS=0.5674 loss=1.565 score=-0.27236 (prev -0.291639) -> promoted  [155.7s]
+  round 38: beta=0.904 ESS=0.2296 loss=1.514 score=-0.25068 (prev -0.272358) -> promoted  [155.6s]
+  round 39: beta=0.922 ESS=0.4973 loss=1.449 score=-0.23263 (prev -0.250684) -> promoted  [155.1s]
+  round 40: beta=0.941 ESS=0.3688 loss=1.367 score=-0.21731 (prev -0.232629) -> promoted  [155.5s]
+  round 41: beta=0.959 ESS=0.2669 loss=1.254 score=-0.20220 (prev -0.217312) -> promoted  [155.6s]
+  round 42: beta=0.978 ESS=0.2197 loss=1.114 score=-0.19084 (prev -0.202201) -> promoted  [155.6s]
+  round 43: beta=0.996 ESS=0.2079 loss=0.974 score=-0.18260 (prev -0.190837) -> promoted  [155.5s]
+  round 44: beta=1.015 ESS=0.3081 loss=0.826 score=-0.17575 (prev -0.182595) -> promoted  [155.5s]
+  round 45: beta=1.033 ESS=0.3879 loss=0.717 score=-0.17014 (prev -0.175746) -> promoted  [155.5s]
+  round 46: beta=1.052 ESS=0.4682 loss=0.627 score=-0.16537 (prev -0.170135) -> promoted  [155.9s]
+  round 47: beta=1.070 ESS=0.6052 loss=0.564 score=-0.16188 (prev -0.16537) -> promoted  [155.3s]
+  round 48: beta=1.089 ESS=0.6791 loss=0.507 score=-0.15897 (prev -0.161878) -> promoted  [155.3s]
+  round 49: beta=1.107 ESS=0.6906 loss=0.461 score=-0.15666 (prev -0.158968) -> promoted  [155.5s]
+  round 50: beta=1.126 ESS=0.7498 loss=0.420 score=-0.15486 (prev -0.156656) -> promoted  [155.4s]
+  round 51: beta=1.144 ESS=0.7820 loss=0.386 score=-0.15357 (prev -0.154863) -> promoted  [155.2s]
+  round 52: beta=1.163 ESS=0.7805 loss=0.353 score=-0.15257 (prev -0.153569) -> promoted  [155.6s]
+  round 53: beta=1.181 ESS=0.8184 loss=0.324 score=-0.15196 (prev -0.152569) -> promoted  [155.5s]
+  round 54: beta=1.200 ESS=0.8390 loss=0.299 score=-0.15166 (prev -0.151962) -> promoted  [155.4s]
+
+55/55 rounds promoted; best score -0.15165517727533975
+artifacts: runs/potts_L16_b1.2
+{
+  "rounds": 55,
+  "promoted": 55,
+  "best_score": -0.15165517727533975,
+  "checkpoint": "runs/potts_L16_b1.2/best.pt"
+}
